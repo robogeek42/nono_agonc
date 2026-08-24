@@ -48,6 +48,7 @@ clean:
 	@cd nono; rm -rf lib include
 	@cd nonoed; make clean
 	@cd nonoed; rm -rf lib include
+	@cd common; rm -rf include
 
 .PHONY: all clean $(MYLIBS)
 

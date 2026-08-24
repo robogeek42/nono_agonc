@@ -8,6 +8,7 @@
 #include "agon/vdp.h"
 #include "agon/mos.h"
 #include "agon/keyboard.h"
+#include "keydefines.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -23,7 +24,11 @@
 #define COL(C) vdp_set_text_colour(C)
 #define TAB(X,Y) vdp_cursor_tab(X,Y)
 
-struct dims_t {
+#define SQ_EMPTY 0
+#define SQ_CROSS 1
+#define SQ_FILL 2
+
+typedef struct {
     int gs;
     int scrWidthPix;    // Screen width in pixels
     int scrHeightPix;    // Screen height in pixels
@@ -35,20 +40,30 @@ struct dims_t {
     int scly;
     int gwidth;     // calculated grid width
     int gheight;    // calculated grid height
-};
+} DIMS;
 
-struct config_t {
+typedef struct {
     int col_gridbg;     // Grid background colour
     int col_gridmin;    // Grid minor lines colour
     int col_gridmaj;    // Grid major colour
     int col_mark;       // Mark colour
     int col_cross;      // Cross colour
     int col_cursor;     // Cursor colour
-};
+} CONFIG;
 
-void init_dims(struct dims_t* d, int gs);
-void init_config(struct config_t* c);
-void draw_grid(struct dims_t* d, struct config_t* c);
+typedef struct {
+    int x;
+    int y;
+} XY; 
+
+void init_dims(int gs);
+void init_config();
+void draw_grid();
+void cursorClear(XY* pos);
+void cursorDraw(XY* pos);
+void redrawGridSquare(XY* pos);
+void set_grid(XY* pos, uint8_t val);
+uint8_t get_grid(XY* pos);
 
 void title(const char *msg, int bar_col, int title_col);
 
