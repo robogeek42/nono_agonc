@@ -108,6 +108,33 @@ int main(int argc, char **argv) {
                 redrawGridSquare(&cursor);
                 cursorDraw(&cursor);
                 break;
+            case KEY_F:
+            case KEY_f:
+                cursorClear(&cursor);
+                XY pos;
+                for (pos.y=0;pos.y<dims.gs;pos.y++) {
+                    for (pos.x=0;pos.x<dims.gs;pos.x++) {
+                        if (get_grid(&pos) == SQ_EMPTY) {
+                            set_grid(&pos, SQ_CROSS);
+                            redrawGridSquare(&pos);
+                        }
+                    }
+                }
+                cursorDraw(&cursor);
+                break;
+            case KEY_C:
+            case KEY_c:
+                if (areYouSure()==true)
+                {
+                    cursorClear(&cursor);
+                    XY pos;
+                    memset(grid, 0, dims.gs * dims.gs);
+                    draw_grid();
+                    cursor.x = 0;
+                    cursor.y = 0;
+                    cursorDraw(&cursor);
+                }
+                break;
             case KEY_Q:
             case KEY_q:
                 xit = true;
