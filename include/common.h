@@ -64,6 +64,9 @@ void cursorDraw(XY* pos);
 void redrawGridSquare(XY* pos);
 void set_grid(XY* pos, uint8_t val);
 uint8_t get_grid(XY* pos);
+int input_int(int x, int y, char *msg);
+bool input_yn(int x, int y, char *msg);
+bool areYouSure();
 
 void title(const char *msg, int bar_col, int title_col);
 

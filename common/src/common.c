@@ -144,6 +144,8 @@ void redrawGridSquare(XY* pos)
     vdp_move_to(
             dims.offx + (pos->x * dims.sclx) + 1,
             dims.offy + (pos->y * dims.scly) + 1);
+    int gap = (dims.sclx * 4) / 5;
+    int gap2 = gap*2;
     uint8_t g = get_grid(pos);
     switch (g) {
         case SQ_EMPTY:
@@ -151,10 +153,13 @@ void redrawGridSquare(XY* pos)
             vdp_plot(PLOT_TYPE_RECT_FILL|PLOT_MODE_FG_REL, dims.sclx-2, dims.scly-2);
             break;
         case SQ_CROSS:
+            vdp_move_to(
+                    dims.offx + (pos->x * dims.sclx) + gap,
+                    dims.offy + (pos->y * dims.scly) + gap);
             vdp_gcol(0, config.col_mark);
-            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, dims.sclx-2, dims.scly-2);
-            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_MOVE_REL, 0, 0-(dims.scly-2));
-            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0-(dims.sclx-2), dims.scly-2);
+            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, dims.sclx-gap2, dims.scly-gap2);
+            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_MOVE_REL, 0, 0-(dims.scly-gap2));
+            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0-(dims.sclx-gap2), dims.scly-gap2);
             break;
         case SQ_FILL:
             vdp_gcol(0, config.col_mark);
@@ -208,6 +213,8 @@ uint8_t wait_for_any_key_press()
         int ret = kbuf_poll_event(&e);
         if (ret && e.isdown) gotkey = 1;
     } while ( gotkey == 0 );
+
+    return e.vkey;
 }
 
 void wait_clock( clock_t ticks )
@@ -217,3 +224,32 @@ void wait_clock( clock_t ticks )
     do {
     } while ( clock() - ticks_now < ticks );
 }
+
+int input_int(int x, int y, char *msg)
+{
+	int num;
+	TAB(x,y);
+	printf("%s:",msg);
+	scanf("%d",&num);
+	return num;
+}
+bool input_yn(int x, int y, char *msg)
+{
+	bool yn = false;
+    char str[12];
+	TAB(x,y);
+	printf("%s:",msg);
+	scanf("%8s",&str[0]);
+    if (str[0] == 'y' || str[0] == 'Y') yn = true;
+	return yn;
+}
+
+bool areYouSure()
+{
+    // TODO make this a popup box
+
+    bool choice = input_yn(0,1, "Are you sure? (y/N) ");
+    TAB(0,1);printf("                                ");
+    return choice;
+}
+
