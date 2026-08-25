@@ -337,6 +337,15 @@ uint8_t wait_for_key(uint8_t key)
     } while (e.vkey != key);
     return key;
 }
+// return after specific key is released
+uint8_t wait_for_key_up(uint8_t key)
+{
+    struct keyboard_event_t e;
+    do {
+        while (!kbuf_poll_event(&e)) {}
+    } while (e.vkey != key && e.isdown);
+    return key;
+}
 // return after key is released
 uint8_t wait_for_any_key()
 {
@@ -370,7 +379,7 @@ void wait_clock( clock_t ticks )
     } while ( clock() - ticks_now < ticks );
 }
 
-int input_int(int x, int y, char *msg)
+int input_int(int x, int y, const char *msg)
 {
 	int num;
 	TAB(x,y);
@@ -378,7 +387,7 @@ int input_int(int x, int y, char *msg)
 	scanf("%d",&num);
 	return num;
 }
-bool input_yn(int x, int y, char *msg)
+bool input_yn(int x, int y, const char *msg)
 {
 	bool yn = false;
     char str[12];

@@ -69,8 +69,8 @@ void redrawGridSquare(uint8_t* grid, XY* pos);
 bool calc_column_run(uint8_t* grid, int col);
 bool calc_row_run(uint8_t* grid, int row);
 
-int input_int(int x, int y, char *msg);
-bool input_yn(int x, int y, char *msg);
+int input_int(int x, int y, const char *msg);
+bool input_yn(int x, int y, const char *msg);
 bool areYouSure(const char *msg);
 
 void title(const char *msg, int bar_col, int title_col);
@@ -82,6 +82,8 @@ void wait_clock( clock_t ticks );
 void clear_keys();
 // return after specific key is pressed
 uint8_t wait_for_key(uint8_t key);
+// return after specific key is released
+uint8_t wait_for_key_up(uint8_t key);
 // return after key is released
 uint8_t wait_for_any_key();
 // return after key-down event

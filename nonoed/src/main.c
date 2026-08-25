@@ -17,6 +17,8 @@ uint8_t* grid;
 CONFIG config;
 DIMS dims;
 
+bool do_loop(int vkey, XY* pcursor);
+
 int main(int argc, char **argv) {
     /* Initialize keyboard buffer to store 16 events (key up and down) */
     kbuf_init(16);
@@ -60,99 +62,12 @@ int main(int argc, char **argv) {
     cursor.y = 0;
     cursorDraw(&cursor);
 
+    vdp_keyboard_control( 250, 500, getsysvar_keyled() );
     int vkey;
     bool xit = false;
     do {
-        vkey = wait_for_any_key();
-    
-        switch (vkey) {
-            case KEY_DOWN:
-                cursorClear(&cursor);
-                cursor.y = (cursor.y + 1) % dims.gs;
-                cursorDraw(&cursor);
-                break;
-            case KEY_UP:
-                cursorClear(&cursor);
-                cursor.y = (cursor.y - 1 + dims.gs) % dims.gs;
-                cursorDraw(&cursor);
-                break;
-            case KEY_RIGHT:
-                cursorClear(&cursor);
-                cursor.x = (cursor.x + 1) % dims.gs;
-                cursorDraw(&cursor);
-                break;
-            case KEY_LEFT:
-                cursorClear(&cursor);
-                cursor.x = (cursor.x - 1 + dims.gs) % dims.gs;
-                cursorDraw(&cursor);
-                break;
-            case KEY_X:
-            case KEY_x:
-                cursorClear(&cursor);
-                set_grid(grid, &cursor, SQ_CROSS);
-                redrawGridSquare(grid, &cursor);
-                cursorDraw(&cursor);
-                calc_column_run(grid, cursor.x);
-                calc_row_run(grid, cursor.y);
-                break;
-            case KEY_space:
-            case KEY_M:
-            case KEY_m:
-                cursorClear(&cursor);
-                set_grid(grid, &cursor, SQ_FILL);
-                redrawGridSquare(grid, &cursor);
-                cursorDraw(&cursor);
-                calc_column_run(grid, cursor.x);
-                calc_row_run(grid, cursor.y);
-                break;
-            case KEY_delete:
-            case KEY_D:
-            case KEY_d:
-                cursorClear(&cursor);
-                set_grid(grid, &cursor, SQ_EMPTY);
-                redrawGridSquare(grid, &cursor);
-                cursorDraw(&cursor);
-                calc_column_run(grid, cursor.x);
-                calc_row_run(grid, cursor.y);
-                break;
-            case KEY_F:
-            case KEY_f:
-                cursorClear(&cursor);
-                XY pos;
-                for (pos.y=0;pos.y<dims.gs;pos.y++) {
-                    for (pos.x=0;pos.x<dims.gs;pos.x++) {
-                        if (get_grid(grid, &pos) == SQ_EMPTY) {
-                            set_grid(grid, &pos, SQ_CROSS);
-                            redrawGridSquare(grid, &pos);
-                        }
-                    }
-                }
-                cursorDraw(&cursor);
-                for (pos.x=0;pos.x<dims.gs;pos.x++) {
-                    calc_column_run(grid, pos.x);
-                }
-                for (pos.y=0;pos.y<dims.gs;pos.y++) {
-                    calc_column_run(grid, pos.y);
-                }
-                break;
-            case KEY_C:
-            case KEY_c:
-                if (areYouSure("CLEAR: Are you sure?"))
-                {
-                    cursorClear(&cursor);
-                    XY pos;
-                    memset(grid, 0, dims.gs * dims.gs);
-                    draw_grid();
-                    cursor.x = 0;
-                    cursor.y = 0;
-                    cursorDraw(&cursor);
-                }
-                break;
-            case KEY_Q:
-            case KEY_q:
-                if (areYouSure("QUIT: Are you sure?")) xit = true;
-                break;
-        }    
+        vkey = wait_for_any_key_press();
+        xit = do_loop(vkey, &cursor);
     } while (vkey != KEY_escape && !xit);
 
     /* Must deinit, or the MOS key event vector is not unset (also frees buffer)  */
@@ -166,4 +81,96 @@ int main(int argc, char **argv) {
     return 0; 
 }
 
-
+bool do_loop(int vkey, XY* pcursor)
+{
+    bool endprog = false;
+    switch (vkey) {
+        case KEY_DOWN:
+            cursorClear(pcursor);
+            pcursor->y = (pcursor->y + 1) % dims.gs;
+            cursorDraw(pcursor);
+            break;
+        case KEY_UP:
+            cursorClear(pcursor);
+            pcursor->y = (pcursor->y - 1 + dims.gs) % dims.gs;
+            cursorDraw(pcursor);
+            break;
+        case KEY_RIGHT:
+            cursorClear(pcursor);
+            pcursor->x = (pcursor->x + 1) % dims.gs;
+            cursorDraw(pcursor);
+            break;
+        case KEY_LEFT:
+            cursorClear(pcursor);
+            pcursor->x = (pcursor->x - 1 + dims.gs) % dims.gs;
+            cursorDraw(pcursor);
+            break;
+        case KEY_X:
+        case KEY_x:
+            cursorClear(pcursor);
+            set_grid(grid, pcursor, SQ_CROSS);
+            redrawGridSquare(grid, pcursor);
+            cursorDraw(pcursor);
+            calc_column_run(grid, pcursor->x);
+            calc_row_run(grid, pcursor->y);
+            break;
+        case KEY_space:
+        case KEY_M:
+        case KEY_m:
+            cursorClear(pcursor);
+            set_grid(grid, pcursor, SQ_FILL);
+            redrawGridSquare(grid, pcursor);
+            cursorDraw(pcursor);
+            calc_column_run(grid, pcursor->x);
+            calc_row_run(grid, pcursor->y);
+            break;
+        case KEY_delete:
+        case KEY_D:
+        case KEY_d:
+            cursorClear(pcursor);
+            set_grid(grid, pcursor, SQ_EMPTY);
+            redrawGridSquare(grid, pcursor);
+            cursorDraw(pcursor);
+            calc_column_run(grid, pcursor->x);
+            calc_row_run(grid, pcursor->y);
+            break;
+        case KEY_F:
+        case KEY_f:
+            cursorClear(pcursor);
+            XY pos;
+            for (pos.y=0;pos.y<dims.gs;pos.y++) {
+                for (pos.x=0;pos.x<dims.gs;pos.x++) {
+                    if (get_grid(grid, &pos) == SQ_EMPTY) {
+                        set_grid(grid, &pos, SQ_CROSS);
+                        redrawGridSquare(grid, &pos);
+                    }
+                }
+            }
+            cursorDraw(pcursor);
+            for (pos.x=0;pos.x<dims.gs;pos.x++) {
+                calc_column_run(grid, pos.x);
+            }
+            for (pos.y=0;pos.y<dims.gs;pos.y++) {
+                calc_column_run(grid, pos.y);
+            }
+            break;
+        case KEY_C:
+        case KEY_c:
+            if (areYouSure("CLEAR: Are you sure?"))
+            {
+                cursorClear(pcursor);
+                XY pos;
+                memset(grid, 0, dims.gs * dims.gs);
+                draw_grid();
+                pcursor->x = 0;
+                pcursor->y = 0;
+                cursorDraw(pcursor);
+            }
+            break;
+        case KEY_Q:
+        case KEY_q:
+            if (areYouSure("QUIT: Are you sure?")) endprog = true;
+            break;
+    }    
+    return endprog;
+}
