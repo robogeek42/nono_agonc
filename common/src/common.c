@@ -202,7 +202,6 @@ bool calc_column_run(uint8_t* grid, int col)
             dims.offx + (col * dims.sclx) + dims.sclx,
             dims.offy - 2);
     vdp_set_graphics_colour(0, BRIGHT_WHITE);
-    vdp_set_text_colour(BRIGHT_WHITE);
 
     // check all columns are set
     for (p.y=0;p.y<dims.gs;p.y++) {
@@ -217,15 +216,108 @@ bool calc_column_run(uint8_t* grid, int col)
             continue;
         }
         if (get_grid(grid, &p)==SQ_CROSS && run>0) {
-            vdp_move_to(x, y);
-            printf("%d",run);
+            if (run>9) {
+                vdp_set_graphics_colour(0, BRIGHT_YELLOW);
+                vdp_move_to(x-2, y);
+                printf("1");
+                vdp_move_to(x+3, y);
+                printf("%d",run%10);
+            } else {
+                vdp_set_graphics_colour(0, BRIGHT_WHITE);
+                vdp_move_to(x, y);
+                printf("%d",run);
+            }
             run = 0;
             y -= 8;
         }
     }
     if (run > 0) {
-        vdp_move_to(x, y);
-        printf("%d",run);
+        if (run>9) {
+            vdp_set_graphics_colour(0, BRIGHT_YELLOW);
+                vdp_move_to(x-2, y);
+                printf("1");
+                vdp_move_to(x+2, y);
+                printf("%d",run%10);
+        } else {
+            vdp_set_graphics_colour(0, BRIGHT_WHITE);
+            vdp_move_to(x, y);
+            printf("%d",run);
+        }
+    }
+    return true;
+}
+
+// Calculate row runs and display
+bool calc_row_run(uint8_t* grid, int row)
+{
+    XY p;
+    p.y = row;
+    
+    // set where to draw numbers and set mode to draw text at graph cursor
+    int x = dims.offx - 10;
+    int y = dims.offy + (row * dims.scly) + (dims.scly - 8)/2; 
+    vdp_write_at_graphics_cursor();
+
+    // reset row
+    vdp_set_graphics_colour(0, BLACK);
+    vdp_filled_rectangle(
+            8,
+            dims.offy + (row * dims.scly),
+            dims.offx - 2,
+            dims.offy + (row * dims.scly) + dims.scly);
+
+    vdp_set_graphics_colour(0, BRIGHT_WHITE);
+    vdp_set_graphics_colour(0, BRIGHT_WHITE);
+
+    // check all rows are set
+    for (p.x=0; p.x<dims.gs; p.x++) {
+        if (get_grid(grid, &p)==SQ_EMPTY) return false;
+    }
+
+    // start from right and count back
+    int run = 0;
+    int first = true;
+    for (p.x=dims.gs-1; p.x>=0; p.x--) {
+        if (get_grid(grid, &p)==SQ_FILL) {
+            run++;
+            continue;
+        }
+        if (get_grid(grid, &p)==SQ_CROSS && run>0) {
+            if (run>9) {
+                vdp_set_graphics_colour(0, BRIGHT_YELLOW);
+                vdp_move_to(x-8, y);
+            } else {
+                vdp_set_graphics_colour(0, BRIGHT_WHITE);
+                vdp_move_to(x, y);
+            }
+            if (first) {
+                printf("%d",run);
+                x -= 16; if (run>9) x -= 8;
+            } else {
+                x -= 8;
+                printf("%d,",run);
+                x -= 8; if (run>9) x -= 8;
+            }
+            run = 0;
+            first = false;
+        }
+    }
+    if (run > 0) {
+        if (run>9) {
+            vdp_set_graphics_colour(0, BRIGHT_YELLOW);
+            vdp_move_to(x-8, y);
+        } else {
+            vdp_set_graphics_colour(0, BRIGHT_WHITE);
+            vdp_move_to(x, y);
+        }
+        if (first) {
+            printf("%d",run);
+            x -= 16; if (run>9) x -= 8;
+        } else {
+            x -= 8;
+            printf("%d,",run);
+            x -= 8; if (run>9) x -= 8;
+        }
     }
     return true;
 }

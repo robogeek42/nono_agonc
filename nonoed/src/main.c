@@ -92,6 +92,7 @@ int main(int argc, char **argv) {
                 redrawGridSquare(grid, &cursor);
                 cursorDraw(&cursor);
                 calc_column_run(grid, cursor.x);
+                calc_row_run(grid, cursor.y);
                 break;
             case KEY_space:
             case KEY_M:
@@ -101,6 +102,7 @@ int main(int argc, char **argv) {
                 redrawGridSquare(grid, &cursor);
                 cursorDraw(&cursor);
                 calc_column_run(grid, cursor.x);
+                calc_row_run(grid, cursor.y);
                 break;
             case KEY_delete:
             case KEY_D:
@@ -110,6 +112,7 @@ int main(int argc, char **argv) {
                 redrawGridSquare(grid, &cursor);
                 cursorDraw(&cursor);
                 calc_column_run(grid, cursor.x);
+                calc_row_run(grid, cursor.y);
                 break;
             case KEY_F:
             case KEY_f:
@@ -126,6 +129,9 @@ int main(int argc, char **argv) {
                 cursorDraw(&cursor);
                 for (pos.x=0;pos.x<dims.gs;pos.x++) {
                     calc_column_run(grid, pos.x);
+                }
+                for (pos.y=0;pos.y<dims.gs;pos.y++) {
+                    calc_column_run(grid, pos.y);
                 }
                 break;
             case KEY_C:
