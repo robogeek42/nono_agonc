@@ -66,9 +66,11 @@ uint8_t get_grid(uint8_t* grid, XY* pos);
 void set_grid(uint8_t* grid, XY* pos, uint8_t val);
 void redrawGridSquare(uint8_t* grid, XY* pos);
 
+bool calc_column_run(uint8_t* grid, int col);
+
 int input_int(int x, int y, char *msg);
 bool input_yn(int x, int y, char *msg);
-bool areYouSure();
+bool areYouSure(const char *msg);
 
 void title(const char *msg, int bar_col, int title_col);
 

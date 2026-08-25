@@ -153,6 +153,10 @@ void redrawGridSquare(uint8_t* grid, XY* pos)
             vdp_plot(PLOT_TYPE_RECT_FILL|PLOT_MODE_FG_REL, dims.sclx-2, dims.scly-2);
             break;
         case SQ_CROSS:
+            // clear
+            vdp_gcol(0, config.col_gridbg);
+            vdp_plot(PLOT_TYPE_RECT_FILL|PLOT_MODE_FG_REL, dims.sclx-2, dims.scly-2);
+            // move to sart of cross top-left
             vdp_move_to(
                     dims.offx + (pos->x * dims.sclx) + gap,
                     dims.offy + (pos->y * dims.scly) + gap);
@@ -179,7 +183,52 @@ uint8_t get_grid(uint8_t* grid, XY* pos)
 }
 
 
+// Calculate column runs and display
+bool calc_column_run(uint8_t* grid, int col)
+{
+    XY p;
+    p.x = col;
+    
+    // set where to draw numbers and set mode to draw text at graph cursor
+    int x = dims.offx + (col * dims.sclx) + (dims.sclx - 8)/2; 
+    int y = dims.offy - 10;
+    vdp_write_at_graphics_cursor();
 
+    // reset column
+    vdp_set_graphics_colour(0, BLACK);
+    vdp_filled_rectangle(
+            dims.offx + (col * dims.sclx),
+            8,
+            dims.offx + (col * dims.sclx) + dims.sclx,
+            dims.offy - 2);
+    vdp_set_graphics_colour(0, BRIGHT_WHITE);
+    vdp_set_text_colour(BRIGHT_WHITE);
+
+    // check all columns are set
+    for (p.y=0;p.y<dims.gs;p.y++) {
+        if (get_grid(grid, &p)==SQ_EMPTY) return false;
+    }
+
+    // start from bottom and count
+    int run = 0;
+    for (p.y=dims.gs-1; p.y>=0; p.y--) {
+        if (get_grid(grid, &p)==SQ_FILL) {
+            run++;
+            continue;
+        }
+        if (get_grid(grid, &p)==SQ_CROSS && run>0) {
+            vdp_move_to(x, y);
+            printf("%d",run);
+            run = 0;
+            y -= 8;
+        }
+    }
+    if (run > 0) {
+        vdp_move_to(x, y);
+        printf("%d",run);
+    }
+    return true;
+}
 
 // clear keyboard buffer
 void clear_keys()
@@ -243,17 +292,25 @@ bool input_yn(int x, int y, char *msg)
     char str[12];
 	TAB(x,y);
 	printf("%s:",msg);
-	scanf("%8s",&str[0]);
+	fgets(&str[0], 12, stdin);
     if (str[0] == 'y' || str[0] == 'Y') yn = true;
 	return yn;
 }
 
-bool areYouSure()
+bool areYouSure(const char *msg)
 {
     // TODO make this a popup box
 
-    bool choice = input_yn(0,1, "Are you sure? (y/N) ");
-    TAB(0,1);printf("                                ");
+    vdp_write_at_text_cursor();
+    vdp_set_text_colour(BRIGHT_WHITE);
+    TAB(0,2);
+    for (int i=0; i< strlen(msg)+2; i++) { printf(" "); }
+
+    bool choice = input_yn(0,2, msg);
+
+    TAB(0,2);
+    for (int i=0; i< strlen(msg)+2; i++) { printf(" "); }
+
     return choice;
 }
 
