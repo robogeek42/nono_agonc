@@ -139,14 +139,14 @@ void cursorDraw(XY* cursor)
     vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0, -dims.scly);
 }
 
-void redrawGridSquare(XY* pos)
+void redrawGridSquare(uint8_t* grid, XY* pos)
 {
     vdp_move_to(
             dims.offx + (pos->x * dims.sclx) + 1,
             dims.offy + (pos->y * dims.scly) + 1);
     int gap = (dims.sclx * 4) / 5;
     int gap2 = gap*2;
-    uint8_t g = get_grid(pos);
+    uint8_t g = get_grid(grid, pos);
     switch (g) {
         case SQ_EMPTY:
             vdp_gcol(0, config.col_gridbg);
@@ -168,14 +168,18 @@ void redrawGridSquare(XY* pos)
     }
 }
 
-void set_grid(XY* pos, uint8_t val)
+// Access functions to grid arrays
+void set_grid(uint8_t* grid, XY* pos, uint8_t val)
 {
     grid[pos->x + (pos->y * dims.gs)] = val;
 }
-uint8_t get_grid(XY* pos)
+uint8_t get_grid(uint8_t* grid, XY* pos)
 {
     return grid[pos->x + (pos->y * dims.gs)];
 }
+
+
+
 
 // clear keyboard buffer
 void clear_keys()

@@ -91,24 +91,24 @@ int main(int argc, char **argv) {
             case KEY_X:
             case KEY_x:
                 cursorClear(&cursor);
-                set_grid(&cursor, SQ_CROSS);
-                redrawGridSquare(&cursor);
+                set_grid(grid, &cursor, SQ_CROSS);
+                redrawGridSquare(grid, &cursor);
                 cursorDraw(&cursor);
                 break;
             case KEY_space:
             case KEY_M:
             case KEY_m:
                 cursorClear(&cursor);
-                set_grid(&cursor, SQ_FILL);
-                redrawGridSquare(&cursor);
+                set_grid(grid, &cursor, SQ_FILL);
+                redrawGridSquare(grid, &cursor);
                 cursorDraw(&cursor);
                 break;
             case KEY_delete:
             case KEY_D:
             case KEY_d:
                 cursorClear(&cursor);
-                set_grid(&cursor, SQ_EMPTY);
-                redrawGridSquare(&cursor);
+                set_grid(grid, &cursor, SQ_EMPTY);
+                redrawGridSquare(grid, &cursor);
                 cursorDraw(&cursor);
                 break;
             case KEY_Q:

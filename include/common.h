@@ -61,9 +61,11 @@ void init_config();
 void draw_grid();
 void cursorClear(XY* pos);
 void cursorDraw(XY* pos);
-void redrawGridSquare(XY* pos);
-void set_grid(XY* pos, uint8_t val);
-uint8_t get_grid(XY* pos);
+
+uint8_t get_grid(uint8_t* grid, XY* pos);
+void set_grid(uint8_t* grid, XY* pos, uint8_t val);
+void redrawGridSquare(uint8_t* grid, XY* pos);
+
 int input_int(int x, int y, char *msg);
 bool input_yn(int x, int y, char *msg);
 bool areYouSure();
