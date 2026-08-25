@@ -94,6 +94,8 @@ int main(int argc, char **argv) {
                 set_grid(grid, &cursor, SQ_CROSS);
                 redrawGridSquare(grid, &cursor);
                 cursorDraw(&cursor);
+                calc_column_run(grid, cursor.x);
+                calc_row_run(grid, cursor.y);
                 break;
             case KEY_space:
             case KEY_M:
@@ -102,6 +104,8 @@ int main(int argc, char **argv) {
                 set_grid(grid, &cursor, SQ_FILL);
                 redrawGridSquare(grid, &cursor);
                 cursorDraw(&cursor);
+                calc_column_run(grid, cursor.x);
+                calc_row_run(grid, cursor.y);
                 break;
             case KEY_delete:
             case KEY_D:
@@ -110,10 +114,25 @@ int main(int argc, char **argv) {
                 set_grid(grid, &cursor, SQ_EMPTY);
                 redrawGridSquare(grid, &cursor);
                 cursorDraw(&cursor);
+                calc_column_run(grid, cursor.x);
+                calc_row_run(grid, cursor.y);
+                break;
+            case KEY_C:
+            case KEY_c:
+                if (areYouSure("CLEAR: Are you sure?"))
+                {
+                    cursorClear(&cursor);
+                    XY pos;
+                    memset(grid, 0, dims.gs * dims.gs);
+                    draw_grid();
+                    cursor.x = 0;
+                    cursor.y = 0;
+                    cursorDraw(&cursor);
+                }
                 break;
             case KEY_Q:
             case KEY_q:
-                xit = true;
+                if (areYouSure("QUIT: Are you sure?")) xit = true;
                 break;
         }    
     } while (vkey != KEY_escape && !xit);
@@ -123,6 +142,9 @@ int main(int argc, char **argv) {
 
     vdp_cursor_enable(true);
 
+    vdp_write_at_text_cursor();
+    TAB(0,3);
+    vdp_set_text_colour(15);
     return 0; 
 }
 

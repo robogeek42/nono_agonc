@@ -46,6 +46,7 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    // Draw the screen
     title("Nonogram Editor", 6, 13);
     TAB(0,1);
     printf("Size %d %dx%d\n", dims.gs, dims.scrWidthChars, dims.scrHeightChars);
