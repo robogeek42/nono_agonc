@@ -1,0 +1,13 @@
+12
+ 1, 10, "100001.dat", "Black Cat", "A witch's friend"
+ 2, 10, "100002.dat", "Cherries", "To top your cupcake"
+ 3, 10, "100003.dat", "Helicopter", "VTOL craft"
+ 4, 10, "100004.dat", "Heart", "Valentine's message"
+ 5, 10, "100005.dat", "White Rabbit", "Let Alice follow"
+ 6, 15, "150006", "Camel", "Arabian beast"
+ 7, 15, "150007", "House", "In the middle of the street"
+ 8, 15, "150008", "Bowl of ramen", "Yummy food"
+ 9, 20, "200009", "Whale", "Ahab's friend"
+10, 10, "100010.dat", "Coffee", "Joe"
+11, 10, "100011.dat", "Grin", "Cheeez"
+12, 10, "100012.dat", "Kettle", "Put it on"
