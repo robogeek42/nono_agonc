@@ -27,7 +27,6 @@
 #define PLOT_TYPE_R_LINEFILL         0x58
 #define PLOT_TYPE_RECT_FILL          0x60
 
-extern uint8_t* grid;
 extern CONFIG config;
 extern DIMS dims;
 
@@ -64,6 +63,17 @@ void init_dims(int gs)
     // and scale
     dims.sclx = dims.gwidth / gs;
     dims.scly = dims.gheight / gs;
+
+    if (dims.sclx > 28) {
+        dims.sclx = 28;
+        dims.scly = 28;
+        // recalc width
+        dims.gwidth = dims.sclx * gs;
+        dims.gheight = dims.scly * gs;
+        // recalc offsets
+        dims.offy = dims.scrHeightPix - dims.gheight - border;
+        dims.offx = dims.scrWidthPix - dims.gwidth - border;
+    }
 }
 
 void init_config()
@@ -105,13 +115,17 @@ void title(const char *msg, int bar_col, int title_col)
     int w = getsysvar_scrCols();
     int l = strlen(msg) + 2; int cl = (w - l) / 2;
     vdp_set_text_colour(bar_col);
+    vdp_set_graphics_colour(0, bar_col);
     for (int i=0;i<cl;i++) { putch(27);putch(0x1C); }
     vdp_set_text_colour(title_col);
+    vdp_set_graphics_colour(0, title_col);
     printf(" %s ", msg);
     vdp_set_text_colour(bar_col);
+    vdp_set_graphics_colour(0, bar_col);
     for (int i=0;i<w - l - cl;i++) { putch(27);putch(0x1C); }
 
-    vdp_set_text_colour(15);
+    vdp_set_text_colour(BRIGHT_WHITE);
+    vdp_set_graphics_colour(0, BRIGHT_WHITE);
 }
 
 void cursorClear(XY* pos)
@@ -405,13 +419,96 @@ bool areYouSure(const char *msg)
     vdp_write_at_text_cursor();
     vdp_set_text_colour(BRIGHT_WHITE);
     TAB(0,2);
-    for (int i=0; i< strlen(msg)+2; i++) { printf(" "); }
+    for (int i=0; i< strlen(msg)+8; i++) { printf(" "); }
 
     bool choice = input_yn(0,2, msg);
 
     TAB(0,2);
-    for (int i=0; i< strlen(msg)+2; i++) { printf(" "); }
+    for (int i=0; i< strlen(msg)+8; i++) { printf(" "); }
 
     return choice;
 }
 
+bool checkFilename(char *fname)
+{
+    return true;
+}
+bool saveBoard(uint8_t *grid, char* fname) 
+{
+    FILE* fptr = fopen(fname, "wb");
+    if (!fptr) return false;
+    fputc(dims.gs, fptr);
+    for (int i=0; i<dims.gs*dims.gs; i++) { fputc(grid[i], fptr); }
+    fclose(fptr);
+    return true;
+}
+bool loadBoard(uint8_t *grid, char* fname) 
+{
+    FILE* fptr = fopen(fname, "rb");
+    if (!fptr) {
+        printf("Cannot open %s\n", fname);
+        return false;
+    }
+    int GS = fgetc(fptr);
+    if (GS != dims.gs) {
+        printf("Incorrect size data\n");
+        fclose(fptr);
+        return false;
+    }
+    for (int i=0; i<dims.gs*dims.gs; i++) { grid[i] = fgetc(fptr); }
+    fclose(fptr);
+
+    return true;
+}
+
+bool isGridComplete(uint8_t* grid)
+{
+    for (int i=0; i<dims.gs*dims.gs; i++) {
+        if (grid[i] == SQ_EMPTY) return false;
+    }
+    return true;
+}
+
+void refreshBoard(uint8_t* grid)
+{
+    XY pos;
+    for (pos.y=0;pos.y<dims.gs;pos.y++) {
+        for (pos.x=0;pos.x<dims.gs;pos.x++) {
+            redrawGridSquare(grid, &pos);
+        }
+        calc_row_run(grid, pos.y);
+    }
+    for (pos.x=0;pos.x<dims.gs;pos.x++) {
+        calc_column_run(grid, pos.x);
+    }
+}
+
+void msgBox(int width, int height, char *msg)
+{
+    // centre
+    int x = (dims.scrWidthChars - width) / 2;
+    int y = (dims.scrHeightChars - height) / 2;
+    // clear a part of the screen
+    vdp_set_graphics_colour(0, YELLOW);
+    vdp_set_text_colour(BRIGHT_WHITE);
+    vdp_filled_rectangle(
+            x*8, y*8,
+            (x+width)*8-1, (y+height+1)*8-1);
+    // draw box
+    vdp_set_graphics_colour(0, BRIGHT_WHITE);
+    vdp_set_text_colour(BRIGHT_WHITE);
+    TAB(x,y);
+    for (int i=0;i<width;i++) { putch(27);putch(0x1C); }
+    for (int i=1;i<height;i++) {
+        TAB(x,y+i);putch(27);putch(0x1C);
+        TAB(x+width-1,y+i);putch(27);putch(0x1C);
+    }
+    TAB(x,y+height);
+    for (int i=0;i<width;i++) { putch(27);putch(0x1C); }
+
+    vdp_set_text_colour(BRIGHT_WHITE);
+    vdp_set_text_colour(128+BLACK);
+    vdp_set_text_bg_colour(BLACK);
+    vdp_set_graphics_bg_colour(0, BLACK);
+    TAB(x+2, y+height/2); printf("%s",msg);
+}

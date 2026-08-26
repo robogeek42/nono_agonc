@@ -17,8 +17,11 @@ uint8_t* grid;
 CONFIG config;
 DIMS dims;
 
+bool showingBox = false;
+
 bool do_loop(int vkey, XY* pcursor);
 
+const char spc30[32] = "                              ";
 int main(int argc, char **argv) {
     /* Initialize keyboard buffer to store 16 events (key up and down) */
     kbuf_init(16);
@@ -50,8 +53,6 @@ int main(int argc, char **argv) {
 
     // Draw the screen
     title("Nonogram Editor", 6, 13);
-    TAB(0,1);
-    printf("Size %d %dx%d\n", dims.gs, dims.scrWidthChars, dims.scrHeightChars);
 
     config.col_gridbg = 7;
     config.col_gridmin = 8;
@@ -65,6 +66,7 @@ int main(int argc, char **argv) {
     vdp_keyboard_control( 250, 500, getsysvar_keyled() );
     int vkey;
     bool xit = false;
+
     do {
         vkey = wait_for_any_key_press();
         xit = do_loop(vkey, &cursor);
@@ -167,9 +169,70 @@ bool do_loop(int vkey, XY* pcursor)
                 cursorDraw(pcursor);
             }
             break;
+        case KEY_S:
+        case KEY_s:
+            if (isGridComplete(grid)) {
+                const char* msg = "SAVE: Filename? ";
+                char filename[30];
+                vdp_write_at_text_cursor();
+                vdp_set_text_colour(11);
+                TAB(0,1);printf("%s",spc30);
+                TAB(0,2);printf("%s",spc30);
+                TAB(0,1);printf("%s", msg);
+                fgets(&filename[0], 28, stdin);
+                if (checkFilename(&filename[0])) {
+                    saveBoard(grid, &filename[0]);
+                    delay(100); // ms
+                    clear_keys();
+                }
+                vdp_set_text_colour(11);
+                TAB(0,1);printf("%s",spc30);
+                TAB(0,2);printf("%s",spc30);
+            }
+            break;
+        case KEY_L:
+        case KEY_l:
+            {
+                const char* msg = "LOAD: Filename? ";
+                char filename[30];
+                vdp_write_at_text_cursor();
+                vdp_set_text_colour(10);
+
+                TAB(0,1);printf("%s",spc30);
+                TAB(0,2);printf("%s",spc30);
+                TAB(0,1);printf("%s", msg);
+                fgets(&filename[0], 28, stdin);
+                TAB(0,0);printf("%s", filename);
+                if (checkFilename(&filename[0])) {
+                    cursorClear(pcursor);
+                    loadBoard(grid, &filename[0]);
+                    refreshBoard(grid);
+                    cursorDraw(pcursor);
+                    delay(100); // ms
+                    clear_keys();
+                }
+                vdp_set_text_colour(10);
+                TAB(0,1);printf("%s",spc30);
+                TAB(0,2);printf("%s",spc30);
+            }
+            break;
         case KEY_Q:
         case KEY_q:
             if (areYouSure("QUIT: Are you sure?")) endprog = true;
+            break;
+        case KEY_T:
+        case KEY_t:
+            if (!showingBox) {
+                msgBox(20,10, "Hello");
+                showingBox = true;
+            } else {
+                vdp_cls();
+                title("Nonogram Editor", 6, 13);
+                draw_grid();
+                refreshBoard(grid);
+                cursorDraw(pcursor);
+                showingBox = false;
+            }
             break;
     }    
     return endprog;

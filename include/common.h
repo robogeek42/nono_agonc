@@ -8,6 +8,7 @@
 #include "agon/vdp.h"
 #include "agon/mos.h"
 #include "agon/keyboard.h"
+#include "agon/timer.h"
 #include "keydefines.h"
 
 #include <string.h>
@@ -25,8 +26,8 @@
 #define TAB(X,Y) vdp_cursor_tab(X,Y)
 
 #define SQ_EMPTY 0
-#define SQ_CROSS 1
-#define SQ_FILL 2
+#define SQ_FILL  1
+#define SQ_CROSS 2
 
 typedef struct {
     int gs;
@@ -89,6 +90,12 @@ uint8_t wait_for_any_key();
 // return after key-down event
 uint8_t wait_for_any_key_press();
 
-void delay(int timeout);
+bool checkFilename(char *fname);
+bool saveBoard(uint8_t *grid, char* fname);
+bool loadBoard(uint8_t *grid, char* fname);
+bool isGridComplete(uint8_t* grid);
 
+void refreshBoard(uint8_t* grid);
+
+void msgBox(int width, int height, char *msg);
 #endif

@@ -54,5 +54,6 @@ clean:
 
 
 emu: $(BINARIES)
-	@cp $(BINARIES) $(FAE_HOME)/sdcard/
-	@cd $(FAE_HOME) ; $(FAE_HOME)/fab-agon-emulator $(FAE_ARGS)
+	cp $(BINARIES) $(FAE_HOME)/sdcard/
+	cp -rf data $(FAE_HOME)/sdcard/
+	cd $(FAE_HOME) ; $(FAE_HOME)/fab-agon-emulator $(FAE_ARGS)
