@@ -24,6 +24,7 @@
 
 #define COL(C) vdp_set_text_colour(C)
 #define TAB(X,Y) vdp_cursor_tab(X,Y)
+#define CLS vdp_cls()
 
 #define SQ_EMPTY 0
 #define SQ_FILL  1
@@ -56,6 +57,14 @@ typedef struct {
     int x;
     int y;
 } XY; 
+
+typedef struct {
+    int id;
+    int gs;
+    char fname[12];
+    char title[20];
+    char clue[30];
+} PUZZINFO; 
 
 void init_dims(int gs);
 void init_config();
@@ -98,4 +107,8 @@ bool isGridComplete(uint8_t* grid);
 void refreshBoard(uint8_t* grid);
 
 void msgBox(int width, int height, char *msg);
+
+
+bool loadFileInfo(char* puzzles_fname);
+void freeFileInfo();
 #endif

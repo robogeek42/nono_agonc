@@ -20,6 +20,7 @@ DIMS dims;
 bool showingBox = false;
 
 bool do_loop(int vkey, XY* pcursor);
+void drawScreen();
 
 const char spc30[32] = "                              ";
 int main(int argc, char **argv) {
@@ -67,19 +68,27 @@ int main(int argc, char **argv) {
     int vkey;
     bool xit = false;
 
+    /* =========================================================
+     * MAIN LOOP 
+     */
     do {
         vkey = wait_for_any_key_press();
         xit = do_loop(vkey, &cursor);
     } while (vkey != KEY_escape && !xit);
 
-    /* Must deinit, or the MOS key event vector is not unset (also frees buffer)  */
+    /* =========================================================
+     * DeInit
+     */
     kbuf_deinit();
 
-    vdp_cursor_enable(true);
+    freeFileInfo();
+    free(grid);
 
+    vdp_cursor_enable(true);
     vdp_write_at_text_cursor();
     TAB(0,3);
     vdp_set_text_colour(15);
+    vdp_set_graphics_colour(0,15);
     return 0; 
 }
 
@@ -153,7 +162,7 @@ bool do_loop(int vkey, XY* pcursor)
                 calc_column_run(grid, pos.x);
             }
             for (pos.y=0;pos.y<dims.gs;pos.y++) {
-                calc_column_run(grid, pos.y);
+                calc_row_run(grid, pos.y);
             }
             break;
         case KEY_C:
@@ -163,7 +172,7 @@ bool do_loop(int vkey, XY* pcursor)
                 cursorClear(pcursor);
                 XY pos;
                 memset(grid, 0, dims.gs * dims.gs);
-                draw_grid();
+                refreshBoard(grid);
                 pcursor->x = 0;
                 pcursor->y = 0;
                 cursorDraw(pcursor);
@@ -175,17 +184,19 @@ bool do_loop(int vkey, XY* pcursor)
                 const char* msg = "SAVE: Filename? ";
                 char filename[30];
                 vdp_write_at_text_cursor();
-                vdp_set_text_colour(11);
+                vdp_set_text_colour(15);
+                vdp_set_graphics_colour(0,15);
                 TAB(0,1);printf("%s",spc30);
                 TAB(0,2);printf("%s",spc30);
                 TAB(0,1);printf("%s", msg);
                 fgets(&filename[0], 28, stdin);
                 if (checkFilename(&filename[0])) {
                     saveBoard(grid, &filename[0]);
-                    delay(100); // ms
+                    delay(300); // ms
                     clear_keys();
                 }
-                vdp_set_text_colour(11);
+                vdp_set_text_colour(15);
+                vdp_set_graphics_colour(0,15);
                 TAB(0,1);printf("%s",spc30);
                 TAB(0,2);printf("%s",spc30);
             }
@@ -196,25 +207,46 @@ bool do_loop(int vkey, XY* pcursor)
                 const char* msg = "LOAD: Filename? ";
                 char filename[30];
                 vdp_write_at_text_cursor();
-                vdp_set_text_colour(10);
+                vdp_set_text_colour(15);
+                vdp_set_graphics_colour(0,15);
 
                 TAB(0,1);printf("%s",spc30);
                 TAB(0,2);printf("%s",spc30);
                 TAB(0,1);printf("%s", msg);
                 fgets(&filename[0], 28, stdin);
-                TAB(0,0);printf("%s", filename);
                 if (checkFilename(&filename[0])) {
-                    cursorClear(pcursor);
-                    loadBoard(grid, &filename[0]);
-                    refreshBoard(grid);
+                    loadBoard(grid, filename);
+                    drawScreen();
                     cursorDraw(pcursor);
-                    delay(100); // ms
+                    delay(300); // ms
                     clear_keys();
+                } else {
+                    TAB(0,3);printf("Failed to load\n");
+                    delay(300); // ms
+                    clear_keys();
+                    wait_for_any_key();
                 }
-                vdp_set_text_colour(10);
+                vdp_set_text_colour(15);
+                vdp_set_graphics_colour(0,15);
                 TAB(0,1);printf("%s",spc30);
                 TAB(0,2);printf("%s",spc30);
             }
+            break;
+        case KEY_backtick:
+            {
+                CLS;
+                if (!loadFileInfo("data/puzzles.txt"))
+                {
+                    printf("Failed to load fileino\n");;
+                }
+                delay(300);
+                clear_keys();
+                wait_for_any_key();
+            }
+            drawScreen();
+            cursorDraw(pcursor);
+            delay(300); // ms
+            clear_keys();
             break;
         case KEY_Q:
         case KEY_q:
@@ -226,14 +258,19 @@ bool do_loop(int vkey, XY* pcursor)
                 msgBox(20,10, "Hello");
                 showingBox = true;
             } else {
-                vdp_cls();
-                title("Nonogram Editor", 6, 13);
-                draw_grid();
-                refreshBoard(grid);
+                drawScreen();
                 cursorDraw(pcursor);
                 showingBox = false;
             }
             break;
     }    
     return endprog;
+}
+
+void drawScreen() 
+{
+    CLS;
+    title("Nonogram Editor", 6, 13);
+    draw_grid();
+    refreshBoard(grid);
 }

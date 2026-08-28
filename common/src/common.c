@@ -30,6 +30,8 @@
 extern CONFIG config;
 extern DIMS dims;
 
+PUZZINFO* puzzinfo = NULL;
+
 void init_dims(int gs)
 {
     int border = 10;
@@ -511,4 +513,50 @@ void msgBox(int width, int height, char *msg)
     vdp_set_text_bg_colour(BLACK);
     vdp_set_graphics_bg_colour(0, BLACK);
     TAB(x+2, y+height/2); printf("%s",msg);
+}
+
+// File dialog
+bool loadFileInfo(char* puzzles_fname)
+{
+    char buff[80]; char* token;
+    FILE* fptr = fopen(puzzles_fname, "r");
+    if (!fptr) {
+        TAB(0,3);printf("can't open %s", puzzles_fname);
+    } else {
+        CLS;
+        if (!fgets(buff,80,fptr)) return false;
+        int num_puzz = atoi(buff);
+
+        if (!puzzinfo) {
+            puzzinfo = (PUZZINFO*) calloc(num_puzz, sizeof(PUZZINFO));
+            if (!puzzinfo) return false;
+        }
+
+        for (int i=0; i<num_puzz; i++) {
+            if (!fgets(buff,80,fptr)) continue;
+
+            token = strtok(buff, ","); if (!token) return false;
+            puzzinfo[i].id = atoi(token);
+
+            token = strtok(NULL, ","); if (!token) return false;
+            puzzinfo[i].gs = atoi(token);
+
+            token = strtok(NULL, ","); if (!token) return false;
+            strncpy(puzzinfo[i].fname, token, 12);
+
+            token = strtok(NULL, ","); if (!token) return false;
+            strncpy(puzzinfo[i].title, token, 20);
+
+            token = strtok(NULL, ","); if (!token) return false;
+            strncpy(puzzinfo[i].clue, token, 30);
+
+            printf("%d: %d %s\n",i,puzzinfo[i].id,puzzinfo[i].title);
+        }
+    }
+    return true;
+}
+
+void freeFileInfo()
+{
+    free(puzzinfo);
 }
