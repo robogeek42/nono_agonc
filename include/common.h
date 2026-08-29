@@ -42,6 +42,9 @@ typedef struct {
     int scly;
     int gwidth;     // calculated grid width
     int gheight;    // calculated grid height
+    int mscl;       // mini grid scale(pixels)
+    int moffx;      // mini grid offset x
+    int moffy;      // mini grid offset y
 } DIMS;
 
 typedef struct {
@@ -57,14 +60,6 @@ typedef struct {
     int x;
     int y;
 } XY; 
-
-typedef struct {
-    int id;
-    int gs;
-    char fname[12];
-    char title[20];
-    char clue[30];
-} PUZZINFO; 
 
 void init_dims(int gs);
 void init_config();
@@ -108,7 +103,6 @@ void refreshBoard(uint8_t* grid);
 
 void msgBox(int width, int height, char *msg);
 
+void viewMini(uint8_t* grid);
 
-bool loadFileInfo(char* puzzles_fname);
-void freeFileInfo();
 #endif

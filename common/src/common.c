@@ -30,8 +30,6 @@
 extern CONFIG config;
 extern DIMS dims;
 
-PUZZINFO* puzzinfo = NULL;
-
 void init_dims(int gs)
 {
     int border = 10;
@@ -76,6 +74,14 @@ void init_dims(int gs)
         dims.offy = dims.scrHeightPix - dims.gheight - border;
         dims.offx = dims.scrWidthPix - dims.gwidth - border;
     }
+
+    if (gs == 10) {
+        dims.mscl = 4;
+    } else {
+        dims.mscl = 3;
+    }
+    dims.moffx = dims.offx - dims.mscl * dims.gs - dims.mscl;
+    dims.moffy = dims.offy - dims.mscl * dims.gs - dims.mscl;
 }
 
 void init_config()
@@ -186,6 +192,12 @@ void redrawGridSquare(uint8_t* grid, XY* pos)
             vdp_plot(PLOT_TYPE_RECT_FILL|PLOT_MODE_FG_REL, dims.sclx-2, dims.scly-2);
             break;
     }
+    vdp_gcol(0, g==SQ_FILL ? config.col_mark : config.col_gridbg);
+    vdp_filled_rectangle(
+            dims.moffx + pos->x * dims.mscl,
+            dims.moffy + pos->y * dims.mscl, 
+            dims.moffx + pos->x * dims.mscl + dims.mscl,
+            dims.moffy + pos->y * dims.mscl + dims.mscl);
 }
 
 // Access functions to grid arrays
@@ -397,11 +409,14 @@ void wait_clock( clock_t ticks )
 
 int input_int(int x, int y, const char *msg)
 {
-	int num;
+	long num;
+    char str[12];
+    char *scanptr;
 	TAB(x,y);
 	printf("%s:",msg);
-	scanf("%d",&num);
-	return num;
+	fgets(&str[0], 12, stdin);
+    num = strtol(str, &scanptr, 0);
+	return (int)num;
 }
 bool input_yn(int x, int y, const char *msg)
 {
@@ -515,48 +530,32 @@ void msgBox(int width, int height, char *msg)
     TAB(x+2, y+height/2); printf("%s",msg);
 }
 
-// File dialog
-bool loadFileInfo(char* puzzles_fname)
+void viewMini(uint8_t* grid) 
 {
-    char buff[80]; char* token;
-    FILE* fptr = fopen(puzzles_fname, "r");
-    if (!fptr) {
-        TAB(0,3);printf("can't open %s", puzzles_fname);
-    } else {
-        CLS;
-        if (!fgets(buff,80,fptr)) return false;
-        int num_puzz = atoi(buff);
+    vdp_set_graphics_colour(0, config.col_gridbg);
+    vdp_filled_rectangle(
+            dims.moffx,
+            dims.moffy,
+            dims.moffx + dims.mscl * dims.gs,
+            dims.moffy + dims.mscl * dims.gs);
+    vdp_set_graphics_colour(0, 14);
+    vdp_rectangle(
+            dims.moffx-1,
+            dims.moffy-1,
+            dims.moffx + dims.mscl * dims.gs + 1,
+            dims.moffy + dims.mscl * dims.gs + 1);
 
-        if (!puzzinfo) {
-            puzzinfo = (PUZZINFO*) calloc(num_puzz, sizeof(PUZZINFO));
-            if (!puzzinfo) return false;
-        }
-
-        for (int i=0; i<num_puzz; i++) {
-            if (!fgets(buff,80,fptr)) continue;
-
-            token = strtok(buff, ","); if (!token) return false;
-            puzzinfo[i].id = atoi(token);
-
-            token = strtok(NULL, ","); if (!token) return false;
-            puzzinfo[i].gs = atoi(token);
-
-            token = strtok(NULL, ","); if (!token) return false;
-            strncpy(puzzinfo[i].fname, token, 12);
-
-            token = strtok(NULL, ","); if (!token) return false;
-            strncpy(puzzinfo[i].title, token, 20);
-
-            token = strtok(NULL, ","); if (!token) return false;
-            strncpy(puzzinfo[i].clue, token, 30);
-
-            printf("%d: %d %s\n",i,puzzinfo[i].id,puzzinfo[i].title);
+    vdp_set_graphics_colour(0, config.col_mark);
+    XY pos;
+    for (pos.y=0;pos.y<dims.gs;pos.y++) {
+        for (pos.x=0;pos.x<dims.gs;pos.x++) {
+            if (get_grid( grid, &pos) == SQ_FILL) {
+                vdp_filled_rectangle(
+                        dims.moffx + pos.x * dims.mscl,
+                        dims.moffy + pos.y * dims.mscl, 
+                        dims.moffx + pos.x * dims.mscl + dims.mscl,
+                        dims.moffy + pos.y * dims.mscl + dims.mscl);
+            }
         }
     }
-    return true;
-}
-
-void freeFileInfo()
-{
-    free(puzzinfo);
 }

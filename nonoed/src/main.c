@@ -66,22 +66,21 @@ int main(int argc, char **argv) {
 
     vdp_keyboard_control( 250, 500, getsysvar_keyled() );
     int vkey;
-    bool xit = false;
+    bool exit = false;
 
     /* =========================================================
      * MAIN LOOP 
      */
     do {
         vkey = wait_for_any_key_press();
-        xit = do_loop(vkey, &cursor);
-    } while (vkey != KEY_escape && !xit);
+        exit = do_loop(vkey, &cursor);
+    } while (vkey != KEY_escape && !exit);
 
     /* =========================================================
      * DeInit
      */
     kbuf_deinit();
 
-    freeFileInfo();
     free(grid);
 
     vdp_cursor_enable(true);
@@ -231,22 +230,6 @@ bool do_loop(int vkey, XY* pcursor)
                 TAB(0,1);printf("%s",spc30);
                 TAB(0,2);printf("%s",spc30);
             }
-            break;
-        case KEY_backtick:
-            {
-                CLS;
-                if (!loadFileInfo("data/puzzles.txt"))
-                {
-                    printf("Failed to load fileino\n");;
-                }
-                delay(300);
-                clear_keys();
-                wait_for_any_key();
-            }
-            drawScreen();
-            cursorDraw(pcursor);
-            delay(300); // ms
-            clear_keys();
             break;
         case KEY_Q:
         case KEY_q:
