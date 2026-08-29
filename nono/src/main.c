@@ -54,19 +54,15 @@ int main(int argc, char **argv) {
         if (a <=30 && a >=5 && (a % 5)==0) GS = a;
     }
 
+    XY cursor;
+
     // Init a struct to hold config info
     init_config();
 
-    // Initialise the boards
-    if (!createGrids(GS)) return -1;
+    loadDialog();
 
-    XY cursor;
     cursor.x = 0;
     cursor.y = 0;
-
-    // Draw the screen
-    drawScreen();
-
     cursorDraw(&cursor);
 
     vdp_keyboard_control( 250, 500, getsysvar_keyled() );
@@ -124,31 +120,35 @@ bool do_loop(int vkey, XY* pcursor)
         case KEY_X:
         case KEY_x:
             cursorClear(pcursor);
-            set_grid(grid, pcursor, SQ_CROSS);
-            redrawGridSquare(grid, pcursor);
+            set_grid(guess, pcursor, SQ_CROSS);
+            redrawGridSquare(guess, pcursor);
             cursorDraw(pcursor);
-            calc_column_run(grid, pcursor->x);
-            calc_row_run(grid, pcursor->y);
+            //calc_column_run(grid, pcursor->x);
+            //calc_row_run(grid, pcursor->y);
             break;
         case KEY_space:
         case KEY_M:
         case KEY_m:
             cursorClear(pcursor);
-            set_grid(grid, pcursor, SQ_FILL);
-            redrawGridSquare(grid, pcursor);
+            set_grid(guess, pcursor, SQ_FILL);
+            redrawGridSquare(guess, pcursor);
             cursorDraw(pcursor);
-            calc_column_run(grid, pcursor->x);
-            calc_row_run(grid, pcursor->y);
+            if (isGridComplete(guess)) {
+                if (checkSolution(guess, grid) == true) {
+                    TAB(0,2); printf("You did it!");
+                }
+            }
+
             break;
         case KEY_delete:
         case KEY_D:
         case KEY_d:
             cursorClear(pcursor);
-            set_grid(grid, pcursor, SQ_EMPTY);
-            redrawGridSquare(grid, pcursor);
+            set_grid(guess, pcursor, SQ_EMPTY);
+            redrawGridSquare(guess, pcursor);
             cursorDraw(pcursor);
-            calc_column_run(grid, pcursor->x);
-            calc_row_run(grid, pcursor->y);
+            //calc_column_run(grid, pcursor->x);
+            //calc_row_run(grid, pcursor->y);
             break;
         case KEY_C:
         case KEY_c:
@@ -156,8 +156,9 @@ bool do_loop(int vkey, XY* pcursor)
             {
                 cursorClear(pcursor);
                 XY pos;
-                memset(grid, 0, dims.gs * dims.gs);
-                refreshBoard(grid);
+                memset(guess, 0, dims.gs * dims.gs);
+                refreshBoard(guess);
+                refreshCounts(grid);
                 pcursor->x = 0;
                 pcursor->y = 0;
                 cursorDraw(pcursor);
@@ -189,10 +190,11 @@ bool do_loop(int vkey, XY* pcursor)
 void drawScreen() 
 {
     CLS;
-    title("Nonogram Editor", 6, 13);
+    title("Nonograms by Robogeek", 14, 11);
     draw_grid();
-    refreshBoard(grid);
-    viewMini(grid);
+    refreshBoard(guess);
+    refreshCounts(grid);
+    viewMini(guess);
 }
 
 bool loadDialog()

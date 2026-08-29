@@ -98,8 +98,10 @@ bool checkFilename(char *fname);
 bool saveBoard(uint8_t *grid, char* fname);
 bool loadBoard(uint8_t *grid, char* fname);
 bool isGridComplete(uint8_t* grid);
+bool checkSolution(uint8_t* guess, uint8_t* solution);
 
 void refreshBoard(uint8_t* grid);
+void refreshCounts(uint8_t* grid);
 
 void msgBox(int width, int height, char *msg);
 

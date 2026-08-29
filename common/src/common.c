@@ -499,6 +499,16 @@ void refreshBoard(uint8_t* grid)
         calc_column_run(grid, pos.x);
     }
 }
+void refreshCounts(uint8_t* grid)
+{
+    XY pos;
+    for (pos.y=0;pos.y<dims.gs;pos.y++) {
+        calc_row_run(grid, pos.y);
+    }
+    for (pos.x=0;pos.x<dims.gs;pos.x++) {
+        calc_column_run(grid, pos.x);
+    }
+}
 
 void msgBox(int width, int height, char *msg)
 {
@@ -559,3 +569,12 @@ void viewMini(uint8_t* grid)
         }
     }
 }
+
+bool checkSolution(uint8_t* guess, uint8_t* solution)
+{
+    for (int i=0; i<dims.gs*dims.gs; i++) {
+        if (guess[i] != solution[i]) return false;
+    }
+    return true;
+}
+
