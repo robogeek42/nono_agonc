@@ -4,6 +4,9 @@ MYLIBS = common
 FAE_HOME = ~/agon/fab
 FAE_ARGS = --scale integer --renderer hw
 
+SDCARD=~/agon/sdcard_sync
+SD_INSTALL_DIR=$(SDCARD)/nono
+
 all: $(APPS)
 $(APPS): $(BINARIES)
 
@@ -41,6 +44,12 @@ $(MYLIBS):
 	
 
 install: $(BINARIES)
+	@echo Install to $(SD_INSTALL_DIR)
+	@mkdir -p $(SD_INSTALL_DIR)
+	@cp $(BINARIES) $(SD_INSTALL_DIR)
+	@mkdir -p $(SD_INSTALL_DIR)/data
+	@rm -f $(SD_INSTALL_DIR)/data/*
+	@cp -rf data/* $(SD_INSTALL_DIR)/data/
 	
 clean:
 	@rm -f $(BINARIES)
