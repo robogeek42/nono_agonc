@@ -120,7 +120,7 @@ void draw_grid()
 void title(const char *msg, int bar_col, int title_col)
 {
     TAB(0,0);
-    int w = getsysvar_scrCols();
+    int w = dims.scrWidthChars;
     int l = strlen(msg) + 2; int cl = (w - l) / 2;
     vdp_set_text_colour(bar_col);
     vdp_set_graphics_colour(0, bar_col);
@@ -429,23 +429,6 @@ bool input_yn(int x, int y, const char *msg)
 	return yn;
 }
 
-bool areYouSure(const char *msg)
-{
-    // TODO make this a popup box
-
-    vdp_write_at_text_cursor();
-    vdp_set_text_colour(BRIGHT_WHITE);
-    TAB(0,2);
-    for (int i=0; i< strlen(msg)+8; i++) { printf(" "); }
-
-    bool choice = input_yn(0,2, msg);
-
-    TAB(0,2);
-    for (int i=0; i< strlen(msg)+8; i++) { printf(" "); }
-
-    return choice;
-}
-
 bool checkFilename(char *fname)
 {
     return true;
@@ -510,36 +493,6 @@ void refreshCounts(uint8_t* grid)
     }
 }
 
-void msgBox(int width, int height, char *msg)
-{
-    // centre
-    int x = (dims.scrWidthChars - width) / 2;
-    int y = (dims.scrHeightChars - height) / 2;
-    // clear a part of the screen
-    vdp_set_graphics_colour(0, YELLOW);
-    vdp_set_text_colour(BRIGHT_WHITE);
-    vdp_filled_rectangle(
-            x*8, y*8,
-            (x+width)*8-1, (y+height+1)*8-1);
-    // draw box
-    vdp_set_graphics_colour(0, BRIGHT_WHITE);
-    vdp_set_text_colour(BRIGHT_WHITE);
-    TAB(x,y);
-    for (int i=0;i<width;i++) { putch(27);putch(0x1C); }
-    for (int i=1;i<height;i++) {
-        TAB(x,y+i);putch(27);putch(0x1C);
-        TAB(x+width-1,y+i);putch(27);putch(0x1C);
-    }
-    TAB(x,y+height);
-    for (int i=0;i<width;i++) { putch(27);putch(0x1C); }
-
-    vdp_set_text_colour(BRIGHT_WHITE);
-    vdp_set_text_colour(128+BLACK);
-    vdp_set_text_bg_colour(BLACK);
-    vdp_set_graphics_bg_colour(0, BLACK);
-    TAB(x+2, y+height/2); printf("%s",msg);
-}
-
 void viewMini(uint8_t* grid) 
 {
     vdp_set_graphics_colour(0, config.col_gridbg);
@@ -570,11 +523,64 @@ void viewMini(uint8_t* grid)
     }
 }
 
+void msgBoxModal(int width_chars, int height_chars, int border_col, int text_col)
+{
+    XY TLg; XY BRg;
+    XY TLc; XY BRc;
+    int width_pix = width_chars * 8;
+    int height_pix = height_chars * 8;
+
+    // centre viewports in screen
+    TLg.x = (dims.scrWidthPix - width_pix) / 2;
+    TLg.y = (dims.scrHeightPix - height_pix) / 2;
+    BRg.x = TLg.x + width_pix;
+    BRg.y = TLg.y + height_pix;
+
+    vdp_set_graphics_fg_colour(0, border_col);
+    vdp_set_graphics_bg_colour(0, BLACK);
+
+    // VDU 24, left; bottom; right; top;: Set graphics viewport
+    vdp_set_graphics_viewport(TLg.x, BRg.y, BRg.x, TLg.y);
+    vdp_clear_graphics();
+
+    // Draw boundary
+    vdp_rectangle(TLg.x, TLg.y, BRg.x, BRg.y);
+    vdp_rectangle(TLg.x+1, TLg.y+1, BRg.x-1, BRg.y-1);
+    vdp_rectangle(TLg.x+2, TLg.y+2, BRg.x-2, BRg.y-2);
+    vdp_rectangle(TLg.x+4, TLg.y+4, BRg.x-4, BRg.y-4);
+
+    // set text viewport
+    TLc.x = 1 + (dims.scrWidthChars - width_chars) / 2;
+    TLc.y = 1 + (dims.scrHeightChars - height_chars) / 2;
+    BRc.x = TLc.x + width_chars - 3;
+    BRc.y = TLc.y + height_chars - 3;
+
+    vdp_set_text_colour(text_col);
+    vdp_set_text_bg_colour(BLACK);
+
+    vdp_set_text_viewport(TLc.x, BRc.y, BRc.x, TLc.y);
+   
+    vdp_clear_screen(); // clear text area
+}
+
 bool checkSolution(uint8_t* guess, uint8_t* solution)
 {
     for (int i=0; i<dims.gs*dims.gs; i++) {
         if (guess[i] != solution[i]) return false;
     }
     return true;
+}
+
+bool areYouSure(const char *msg)
+{
+    int ml = strlen(msg);
+    msgBoxModal(30,14, BRIGHT_YELLOW, BRIGHT_WHITE);
+
+    bool choice = input_yn(4,6, msg);
+
+    vdp_reset_viewports();
+    vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+
+    return choice;
 }
 

@@ -26,8 +26,6 @@ PUZZINFO* puzzinfo;
 CONFIG config;
 DIMS dims;
 
-bool showingBox = false;
-
 bool do_loop(int vkey, XY* pcursor);
 void drawScreen();
 bool loadDialog();
@@ -223,17 +221,6 @@ bool do_loop(int vkey, XY* pcursor)
         case KEY_Q:
         case KEY_q:
             if (areYouSure("QUIT: Are you sure?")) endprog = true;
-            break;
-        case KEY_T:
-        case KEY_t:
-            if (!showingBox) {
-                msgBox(20,10, "Hello");
-                showingBox = true;
-            } else {
-                drawScreen();
-                cursorDraw(pcursor);
-                showingBox = false;
-            }
             break;
     }    
     return endprog;

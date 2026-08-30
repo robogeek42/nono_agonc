@@ -27,8 +27,6 @@ PUZZINFO* puzzinfo;
 CONFIG config;
 DIMS dims;
 
-bool showingBox = false;
-
 bool do_loop(int vkey, XY* pcursor);
 void drawScreen();
 bool loadDialog();
@@ -154,15 +152,12 @@ bool do_loop(int vkey, XY* pcursor)
         case KEY_c:
             if (areYouSure("CLEAR: Are you sure?"))
             {
-                cursorClear(pcursor);
                 XY pos;
                 memset(guess, 0, dims.gs * dims.gs);
-                refreshBoard(guess);
-                refreshCounts(grid);
                 pcursor->x = 0;
                 pcursor->y = 0;
-                cursorDraw(pcursor);
             }
+            drawScreen();
             break;
         case KEY_L:
         case KEY_l:
@@ -182,6 +177,7 @@ bool do_loop(int vkey, XY* pcursor)
         case KEY_Q:
         case KEY_q:
             if (areYouSure("QUIT: Are you sure?")) endprog = true;
+            drawScreen();
             break;
     }    
     return endprog;
@@ -249,7 +245,7 @@ bool loadDialog()
             return false;
         }
     } else {
-        printf("Failed to load fileino\n");;
+        printf("Failed to load fileinfo\n");;
         wait_for_any_key();
         return false;
     }

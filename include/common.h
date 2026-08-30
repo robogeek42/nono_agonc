@@ -103,7 +103,7 @@ bool checkSolution(uint8_t* guess, uint8_t* solution);
 void refreshBoard(uint8_t* grid);
 void refreshCounts(uint8_t* grid);
 
-void msgBox(int width, int height, char *msg);
+void msgBoxModal(int width_chars, int height_chars, int border_col, int text_col);
 
 void viewMini(uint8_t* grid);
 
