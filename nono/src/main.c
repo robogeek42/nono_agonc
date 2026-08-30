@@ -29,7 +29,7 @@ DIMS dims;
 
 bool do_loop(int vkey, XY* pcursor);
 void drawScreen();
-bool loadDialog();
+int loadDialog();
 int loadFileInfo(char* puzzles_fname);
 bool createGrids(int GS);
 void redraw_screen(uint8_t* g);
@@ -57,24 +57,26 @@ int main(int argc, char **argv) {
     // Init a struct to hold config info
     init_config();
 
-    loadDialog();
+    if (loadDialog() > 0)
+    {
 
-    cursor.x = 0;
-    cursor.y = 0;
-    cursorDraw(&cursor);
+        cursor.x = 0;
+        cursor.y = 0;
+        cursorDraw(&cursor);
 
-    vdp_keyboard_control( 250, 500, getsysvar_keyled() );
-    int vkey;
-    bool exit = false;
+        vdp_keyboard_control( 250, 500, getsysvar_keyled() );
+        int vkey;
+        bool exit = false;
 
-    /* =========================================================
-     * MAIN LOOP 
-     */
-    do {
-        vkey = wait_for_any_key_press();
-        exit = do_loop(vkey, &cursor);
-    } while (vkey != KEY_escape && !exit);
+        /* =========================================================
+         * MAIN LOOP 
+         */
+        do {
+            vkey = wait_for_any_key_press();
+            exit = do_loop(vkey, &cursor);
+        } while (vkey != KEY_escape && !exit);
 
+    }
     /* =========================================================
      * DeInit
      */
@@ -85,7 +87,7 @@ int main(int argc, char **argv) {
 
     vdp_cursor_enable(true);
     vdp_write_at_text_cursor();
-    TAB(0,3);
+    TAB(1,38);
     vdp_set_text_colour(15);
     vdp_set_graphics_colour(0,15);
     return 0; 
@@ -166,18 +168,33 @@ bool do_loop(int vkey, XY* pcursor)
             clear_keys();
 
             // Call load dialog
-            if (!loadDialog()) {
-                return -1;
+            int ret = loadDialog();
+            if (ret < 0) {
+                printf("Error!\nGOODBYE!\n");
+                return true; // end
+            } else if (ret == 0) {
+                printf("GOODBYE!\n");
+                return true; // end
             }
 
             pcursor->x = 0;
             pcursor->y = 0;
             cursorDraw(pcursor);
             break;
+
         case KEY_Q:
         case KEY_q:
-            if (areYouSure("QUIT: Are you sure?")) endprog = true;
-            drawScreen();
+            if (areYouSure("QUIT: Are you sure?")) {
+                endprog = true;
+                CLS;
+                msgBoxModal(20,11, BRIGHT_RED, BRIGHT_YELLOW);
+                TAB(5,4);printf("GOODBYE!");
+                vdp_reset_viewports();
+                vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+                TAB(1,36);
+            } else {
+                drawScreen();
+            }
             break;
     }    
     return endprog;
@@ -193,7 +210,7 @@ void drawScreen()
     viewMini(guess);
 }
 
-bool loadDialog()
+int loadDialog()
 {
     CLS;
     title("LOAD DIALOG", 4, 12);
@@ -215,6 +232,7 @@ bool loadDialog()
         }
         
         int sel = input_int(0,24,"Enter file number: ");
+        if (sel==0) return 0;
 
         sel--;
 
@@ -228,28 +246,28 @@ bool loadDialog()
             {
                 printf("\nFailed to create grids\n");
                 wait_for_any_key();
-                return false;
+                return -1;
             }
 
             if (!loadBoard(grid, filename))
             {
                 printf("\nFailed to load board\n");
                 wait_for_any_key();
-                return false;
+                return -1;
             }
             drawScreen();
 
         } else {
             TAB(0,3);printf("Failed to load\n");
             wait_for_any_key();
-            return false;
+            return -1;
         }
     } else {
         printf("Failed to load fileinfo\n");;
         wait_for_any_key();
-        return false;
+        return -1;
     }
-    return true;
+    return num_puzz;
 }
 
 // Load up the puzzle info file
