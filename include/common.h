@@ -109,6 +109,7 @@ void redrawGridSquare(uint8_t* grid, XY* pos);
 bool calc_column_run(uint8_t* grid, int col);
 bool calc_row_run(uint8_t* grid, int row);
 
+void processString(char *str, char *str2);
 int input_int(int x, int y, const char *msg);
 bool input_yn(int x, int y, const char *msg);
 bool areYouSure(const char *msg);

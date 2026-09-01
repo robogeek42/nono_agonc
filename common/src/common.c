@@ -384,25 +384,56 @@ void wait_clock( clock_t ticks )
     } while ( clock() - ticks_now < ticks );
 }
 
+void processString(char *str, char *str2)
+{
+    //printf("\nSTR:%s (%d)\n",str, strlen(str));
+    int i=0; int j=0;
+    while (i<strlen(str)) {
+        //printf("%d, ",str[i]);
+
+        if (str[i]==127) {
+            j--;
+        } else {
+            str2[j] = str[i];
+            j++;
+        }
+        i++;
+    }
+    str2[j]=0;
+    //printf("\n");
+    //printf("\nSTR2:%s (%d)\n",str2, strlen(str2));
+}
+
 int input_int(int x, int y, const char *msg)
 {
 	long num;
-    char str[12];
+    char str[64];
+    char str2[64];
     char *scanptr;
+
 	TAB(x,y);
 	printf("%s:",msg);
-	fgets(&str[0], 12, stdin);
-    num = strtol(str, &scanptr, 0);
+	fgets(&str[0], 64, stdin);
+
+    processString(str, str2);
+    num = strtol(str2, &scanptr, 0);
 	return (int)num;
 }
+
 bool input_yn(int x, int y, const char *msg)
 {
 	bool yn = false;
-    char str[12];
+    char str[32];
+    char str2[32];
+
 	TAB(x,y);
 	printf("%s:",msg);
-	fgets(&str[0], 12, stdin);
-    if (str[0] == 'y' || str[0] == 'Y') yn = true;
+	fgets(&str[0], 32, stdin);
+
+    processString(str, str2);
+
+    if (str2[0] == 'y' || str2[0] == 'Y') yn = true;
+
 	return yn;
 }
 

@@ -165,8 +165,11 @@ bool doActions(int vkey, XY* pcursor)
             {
                 XY pos;
                 memset(guess, 0, dims.gs * dims.gs);
-                deleteList(ulist);
-                ulist = NULL;
+                if (ulist)
+                {
+                    deleteList(ulist);
+                    ulist = NULL;
+                }
 
                 pcursor->x = 0;
                 pcursor->y = 0;
@@ -186,8 +189,11 @@ bool doActions(int vkey, XY* pcursor)
                     printf("GOODBYE!\n");
                     return true; // end
                 }
-                deleteList(ulist);
-                ulist = NULL;
+                if (ulist)
+                {
+                    deleteList(ulist);
+                    ulist = NULL;
+                }
 
                 pcursor->x = 0;
                 pcursor->y = 0;
