@@ -4,29 +4,6 @@
 */
 #include "common.h"
 
-#define PLOT_MODE_MOVE_REL 0
-#define PLOT_MODE_FG_REL 1
-#define PLOT_MODE_INV_REL 2
-#define PLOT_MODE_BG_REL 3
-#define PLOT_MODE_MOVE_ABS 4
-#define PLOT_MODE_FG_ABS 5
-#define PLOT_MODE_INV_ABS 6
-#define PLOT_MODE_BG_ABS 7
-
-#define PLOT_TYPE_SOLID_ALL          0x00
-#define PLOT_TYPE_SOLID_NOFINAL      0x08
-#define PLOT_TYPE_DOT_DASH_ALL       0x10
-#define PLOT_TYPE_DOT_DASH_NOFINAL   0x18
-#define PLOT_TYPE_SOLID_NOSTART      0x20
-#define PLOT_TYPE_SOLID_NOENDS       0x28
-#define PLOT_TYPE_DOT_DASH_ALL_CONT       0x30
-#define PLOT_TYPE_DOT_DASH_NOFINAL_CONT   0x38
-#define PLOT_TYPE_POINT              0x40
-#define PLOT_TYPE_LR_LINEFILL        0x48
-#define PLOT_TYPE_TRIANGLE_FILL      0x50
-#define PLOT_TYPE_R_LINEFILL         0x58
-#define PLOT_TYPE_RECT_FILL          0x60
-
 extern CONFIG config;
 extern DIMS dims;
 
@@ -544,10 +521,10 @@ void msgBoxModal(int width_chars, int height_chars, int border_col, int text_col
     vdp_clear_graphics();
 
     // Draw boundary
-    vdp_rectangle(TLg.x, TLg.y, BRg.x, BRg.y);
-    vdp_rectangle(TLg.x+1, TLg.y+1, BRg.x-1, BRg.y-1);
-    vdp_rectangle(TLg.x+2, TLg.y+2, BRg.x-2, BRg.y-2);
-    vdp_rectangle(TLg.x+4, TLg.y+4, BRg.x-4, BRg.y-4);
+    vdp_rectangle(TLg.x, TLg.y-1, BRg.x, BRg.y);
+    vdp_rectangle(TLg.x+1, TLg.y+0, BRg.x-1, BRg.y-1);
+    vdp_rectangle(TLg.x+2, TLg.y+1, BRg.x-2, BRg.y-2);
+    vdp_rectangle(TLg.x+4, TLg.y+3, BRg.x-4, BRg.y-4);
 
     // set text viewport
     TLc.x = 1 + (dims.scrWidthChars - width_chars) / 2;

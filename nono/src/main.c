@@ -26,13 +26,21 @@ PUZZINFO* puzzinfo;
 
 CONFIG config;
 DIMS dims;
+ULENTRY *ulist=NULL, *ulist_current=NULL;
 
-bool do_loop(int vkey, XY* pcursor);
+bool doActions(int vkey, XY* pcursor);
 void drawScreen();
 int loadDialog();
 int loadFileInfo(char* puzzles_fname);
 bool createGrids(int GS);
 void redraw_screen(uint8_t* g);
+void checkWin();
+
+bool addUndo(uint8_t x, uint8_t y, uint8_t old_state, uint8_t new_state);
+bool deleteList(ULENTRY* ulfrom);
+bool undoAction(uint8_t *grid);
+bool redoAction(uint8_t *grid);
+void printUndoList();
 
 const char spc30[32] = "                              ";
 int main(int argc, char **argv) {
@@ -73,7 +81,7 @@ int main(int argc, char **argv) {
          */
         do {
             vkey = wait_for_any_key_press();
-            exit = do_loop(vkey, &cursor);
+            exit = doActions(vkey, &cursor);
         } while (vkey != KEY_escape && !exit);
 
     }
@@ -93,9 +101,14 @@ int main(int argc, char **argv) {
     return 0; 
 }
 
-bool do_loop(int vkey, XY* pcursor)
+bool doActions(int vkey, XY* pcursor)
 {
     bool endprog = false;
+
+    // prevent key bounce
+    delay(300); // ms
+    clear_keys();
+
     switch (vkey) {
         case KEY_DOWN:
             cursorClear(pcursor);
@@ -120,35 +133,31 @@ bool do_loop(int vkey, XY* pcursor)
         case KEY_X:
         case KEY_x:
             cursorClear(pcursor);
+            addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_CROSS);
             set_grid(guess, pcursor, SQ_CROSS);
             redrawGridSquare(guess, pcursor);
+            checkWin();
             cursorDraw(pcursor);
-            //calc_column_run(grid, pcursor->x);
-            //calc_row_run(grid, pcursor->y);
             break;
         case KEY_space:
         case KEY_M:
         case KEY_m:
             cursorClear(pcursor);
+            addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_FILL);
             set_grid(guess, pcursor, SQ_FILL);
             redrawGridSquare(guess, pcursor);
+            checkWin();
             cursorDraw(pcursor);
-            if (isGridComplete(guess)) {
-                if (checkSolution(guess, grid) == true) {
-                    TAB(0,2); printf("You did it!");
-                }
-            }
 
             break;
         case KEY_delete:
         case KEY_D:
         case KEY_d:
             cursorClear(pcursor);
+            addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_EMPTY);
             set_grid(guess, pcursor, SQ_EMPTY);
             redrawGridSquare(guess, pcursor);
             cursorDraw(pcursor);
-            //calc_column_run(grid, pcursor->x);
-            //calc_row_run(grid, pcursor->y);
             break;
         case KEY_C:
         case KEY_c:
@@ -156,30 +165,34 @@ bool do_loop(int vkey, XY* pcursor)
             {
                 XY pos;
                 memset(guess, 0, dims.gs * dims.gs);
+                deleteList(ulist);
+                ulist = NULL;
+
                 pcursor->x = 0;
                 pcursor->y = 0;
             }
             drawScreen();
+            cursorDraw(pcursor);
             break;
         case KEY_L:
         case KEY_l:
-            // prevent key bounce
-            delay(300); // ms
-            clear_keys();
+            {
+                // Call load dialog
+                int ret = loadDialog();
+                if (ret < 0) {
+                    printf("Error!\nGOODBYE!\n");
+                    return true; // end
+                } else if (ret == 0) {
+                    printf("GOODBYE!\n");
+                    return true; // end
+                }
+                deleteList(ulist);
+                ulist = NULL;
 
-            // Call load dialog
-            int ret = loadDialog();
-            if (ret < 0) {
-                printf("Error!\nGOODBYE!\n");
-                return true; // end
-            } else if (ret == 0) {
-                printf("GOODBYE!\n");
-                return true; // end
+                pcursor->x = 0;
+                pcursor->y = 0;
+                cursorDraw(pcursor);
             }
-
-            pcursor->x = 0;
-            pcursor->y = 0;
-            cursorDraw(pcursor);
             break;
 
         case KEY_Q:
@@ -194,7 +207,31 @@ bool do_loop(int vkey, XY* pcursor)
                 TAB(1,36);
             } else {
                 drawScreen();
+                cursorDraw(pcursor);
             }
+            break;
+
+        case KEY_U:
+        case KEY_u:
+            undoAction(guess);
+            break;
+
+        case KEY_R:
+        case KEY_r:
+            redoAction(guess);
+            break;
+
+        case KEY_backtick:
+            break;
+
+        case KEY_T:
+        case KEY_t:
+            // testing only
+            for (int i=0; i<dims.gs*dims.gs; i++) {
+                guess[i] = grid[i];
+            }
+            guess[0] = SQ_EMPTY;
+            refreshBoard(guess);
             break;
     }    
     return endprog;
@@ -218,7 +255,7 @@ int loadDialog()
     int num_puzz = loadFileInfo("data/puzzles.txt");
     if (num_puzz > 0)
     {
-        TAB(0,1);
+        TAB(1,1);
         printf("Select a puzzle (1 - %d)", num_puzz);
         int line = 3; int col = 2;
         for (int i=0; i<num_puzz; i++)
@@ -258,7 +295,7 @@ int loadDialog()
             drawScreen();
 
         } else {
-            TAB(0,3);printf("Failed to load\n");
+            TAB(1,3);printf("Failed to load\n");
             wait_for_any_key();
             return -1;
         }
@@ -277,7 +314,7 @@ int loadFileInfo(char* puzzles_fname)
     char buff[80]; char* token;
     FILE* fptr = fopen(puzzles_fname, "r");
     if (!fptr) {
-        TAB(0,3);printf("can't open %s", puzzles_fname);
+        TAB(1,3);printf("can't open %s", puzzles_fname);
     } else {
         CLS;
         if (!fgets(buff,80,fptr)) return -1;
@@ -332,4 +369,223 @@ bool createGrids(int GS)
         return false;
     }
     return true;
+}
+
+void checkWin()
+{
+    if (isGridComplete(guess)) {
+        if (checkSolution(guess, grid) == true) {
+            msgBoxModal(20,11, BRIGHT_GREEN, BRIGHT_YELLOW);
+            TAB(4,5);printf("You did it!!");
+            wait_for_any_key();
+            vdp_reset_viewports();
+            vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+            drawScreen();
+        }
+    }
+}
+
+// Add undo. Create a new node.  
+// Nodes can only be added at the current pointer
+// 3 situations:
+//   1. No list
+//   2. Current is at end (next==NULL)
+//   3. Current is in mid list (next != NULL)
+bool addUndo(uint8_t x, uint8_t y, uint8_t old_state, uint8_t new_state)
+{
+    //vdp_gcol(0,0); vdp_filled_rectangle(0,8,20*8,2*8);
+    //vdp_gcol(0,15); vdp_set_text_colour(15);
+    //TAB(1,1); printf("save %d,%d %d %d\n", x, y, old_state, new_state);
+    // Type 1 : No list yet
+    if (!ulist)
+    {
+        ulist = (ULENTRY*)malloc(sizeof(ULENTRY));
+        if (!ulist)
+        {
+            vdp_gcol(0,15); vdp_set_text_colour(15);
+            printf("malloc error\n");
+            wait_for_any_key();
+            return false;
+        }
+        ulist->next = NULL;  // indicates tail
+        ulist->prev = NULL;  // indicates head
+        ulist->x = x;
+        ulist->y = y;
+        ulist->old_state = old_state;
+        ulist->new_state = new_state;
+
+        ulist_current = ulist;
+        return true;
+    } 
+
+    // Check ulist_current is set
+    if (!ulist_current) {
+        vdp_gcol(0,15); vdp_set_text_colour(15);
+        printf("error current-ptr is NULL!\n");
+        delay(5000);
+        clear_keys();
+        wait_for_any_key();
+        return true;
+    }
+
+    // maybe bounce?
+    if (ulist_current->x == x &&
+            ulist_current->y == y &&
+            ulist_current->old_state == old_state &&
+            ulist_current->new_state == new_state)
+    {
+        return true;
+    }
+
+    // Type 2 : current is at end of list, append
+    if (ulist_current->next == NULL)
+    {
+        // new entry
+        ULENTRY* ul = (ULENTRY*)malloc(sizeof(ULENTRY));
+        if (!ul) {
+            vdp_gcol(0,15); vdp_set_text_colour(15);
+            printf("malloc error\n");
+            delay(5000);
+            clear_keys();
+            wait_for_any_key();
+            return false;
+        }
+        ul->prev = ulist_current;
+        ul->next = NULL;
+        ul->x = x;
+        ul->y = y;
+        ul->old_state = old_state;
+        ul->new_state = new_state;
+        // Move current
+        ulist_current->next = ul;
+        ulist_current = ul;
+        return true;
+
+    }
+
+    // Type 3 : we are somewhere in the middle of the undo list
+    if (ulist_current->next != NULL)
+    {
+        // new entry
+        ULENTRY* ul = (ULENTRY*)malloc(sizeof(ULENTRY));
+        if (!ul) {
+            vdp_gcol(0,15); vdp_set_text_colour(15);
+            printf("malloc error\n");
+            wait_for_any_key();
+            return false;
+        }
+        ul->prev = ulist_current;
+        ul->next = NULL;
+        ul->x = x;
+        ul->y = y;
+        ul->old_state = old_state;
+        ul->new_state = new_state;
+
+        // Delete list forward of current
+        deleteList(ulist_current->next);
+        ulist_current->next = NULL;
+
+        // move current
+        ulist_current->next = ul;
+        ulist_current = ul;
+
+        return true;
+    }
+
+    return false;
+}
+
+bool deleteList(ULENTRY* ulfrom)
+{
+    ULENTRY* ul = ulfrom;
+    // walk to end
+    while (ul->next != NULL)
+    {
+        ul = ul->next;
+    }
+
+    while (ul != ulfrom)
+    {
+        // get a ptr to the entry to be deleted
+        ULENTRY* uldelete = ul;
+        // go back one
+        ul = ul->prev;
+        // cut off the delete entry from the list
+        ul->next = NULL;
+        // and delete
+        free(uldelete);
+    }
+    return true;
+}
+
+bool undoAction(uint8_t *g)
+{
+    if (!ulist) return false;
+
+    if (!ulist_current) return false;
+
+    //vdp_gcol(0,0); vdp_filled_rectangle(0,8,20*8,2*8);
+    //vdp_gcol(0,15); vdp_set_text_colour(15);
+    //TAB(1,1); printf("undo %d,%d %d %d\n", ulist_current->x, ulist_current->y, ulist_current->old_state, ulist_current->new_state);
+
+    // redraw to the saved state
+    XY upos;
+    upos.x = ulist_current->x;
+    upos.y = ulist_current->y;
+    set_grid(g, &upos, ulist_current->old_state);
+    redrawGridSquare(g, &upos);
+
+    // move the undo current pointer to the previous entry
+    ulist_current = ulist_current->prev;
+    return true;
+}
+
+bool redoAction(uint8_t *g)
+{
+    ULENTRY *ul;
+
+    if (!ulist) return false;
+    if (!ulist_current) {
+        // at head
+        ul = ulist;
+    } else {
+        // move the undo current pointer to the next entry
+        ul = ulist_current->next;
+    }
+
+    // at end of undo list
+    if (!ul) return true;
+
+    //vdp_gcol(0,0); vdp_filled_rectangle(0,8,20*8,2*8);
+    //vdp_gcol(0,15); vdp_set_text_colour(15);
+    //TAB(1,1); printf("redo %d,%d %d %d\n", ul->x, ul->y, ul->old_state, ul->new_state);
+
+    // redraw the saved state
+    XY upos;
+    upos.x = ul->x;
+    upos.y = ul->y;
+    set_grid(g, &upos, ul->new_state);
+    redrawGridSquare(g, &upos);
+    // move the current pointer
+    ulist_current = ul;
+
+    return true;
+}
+
+void printUndoList()
+{
+    TAB(1,3);
+    ULENTRY* ul = ulist;
+    vdp_gcol(0,15);
+    vdp_set_text_colour(15);
+    while(ul!=NULL)
+    {
+        printf("%p: %d,%d : %s->%s N:%p P:%p\n", ul,
+                ul->x, ul->y,
+                ul->old_state==SQ_EMPTY?"BLANK":ul->old_state==SQ_CROSS?"CROSS":"FILL",
+                ul->new_state==SQ_EMPTY?"BLANK":ul->new_state==SQ_CROSS?"CROSS":"FILL",
+                ul->next, ul->prev);
+        ul = ul->next;
+    }
+    printf("----------------------------\n");
 }

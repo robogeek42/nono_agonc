@@ -26,6 +26,29 @@
 #define TAB(X,Y) vdp_cursor_tab(X,Y)
 #define CLS vdp_cls()
 
+#define PLOT_MODE_MOVE_REL 0
+#define PLOT_MODE_FG_REL 1
+#define PLOT_MODE_INV_REL 2
+#define PLOT_MODE_BG_REL 3
+#define PLOT_MODE_MOVE_ABS 4
+#define PLOT_MODE_FG_ABS 5
+#define PLOT_MODE_INV_ABS 6
+#define PLOT_MODE_BG_ABS 7
+
+#define PLOT_TYPE_SOLID_ALL          0x00
+#define PLOT_TYPE_SOLID_NOFINAL      0x08
+#define PLOT_TYPE_DOT_DASH_ALL       0x10
+#define PLOT_TYPE_DOT_DASH_NOFINAL   0x18
+#define PLOT_TYPE_SOLID_NOSTART      0x20
+#define PLOT_TYPE_SOLID_NOENDS       0x28
+#define PLOT_TYPE_DOT_DASH_ALL_CONT       0x30
+#define PLOT_TYPE_DOT_DASH_NOFINAL_CONT   0x38
+#define PLOT_TYPE_POINT              0x40
+#define PLOT_TYPE_LR_LINEFILL        0x48
+#define PLOT_TYPE_TRIANGLE_FILL      0x50
+#define PLOT_TYPE_R_LINEFILL         0x58
+#define PLOT_TYPE_RECT_FILL          0x60
+
 #define SQ_EMPTY 0
 #define SQ_FILL  1
 #define SQ_CROSS 2
@@ -60,6 +83,18 @@ typedef struct {
     int x;
     int y;
 } XY; 
+
+struct ULENTRY_T {
+    uint8_t x;
+    uint8_t y;
+    uint8_t old_state;
+    uint8_t new_state;
+    struct ULENTRY_T *next; 
+    struct ULENTRY_T *prev; 
+};
+
+typedef struct ULENTRY_T ULENTRY;
+
 
 void init_dims(int gs);
 void init_config();
