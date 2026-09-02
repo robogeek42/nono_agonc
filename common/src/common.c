@@ -439,6 +439,24 @@ bool input_yn(int x, int y, const char *msg)
 
 bool checkFilename(char *fname)
 {
+    if (strlen(fname)==0) return false;
+    /*
+    char *pdot = strrchr(fname, '.');
+    if (pdot) {
+        if (strncmp(pdot,".bin",4)==0) {
+            printf("Filename cannot end in .bin\n");
+            return false;
+        }
+    }
+    if (strncmp(fname,"bin/",4)==0) {
+            printf("cannot write to bin/\n");
+            return false;
+    }
+    if (strncmp(fname,"mos/",4)==0) {
+            printf("cannot write to mos/\n");
+            return false;
+    }
+    */
     return true;
 }
 bool saveBoard(uint8_t *grid, char* fname) 

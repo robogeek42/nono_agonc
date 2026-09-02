@@ -26,9 +26,9 @@ PUZZINFO* puzzinfo;
 CONFIG config;
 DIMS dims;
 
-bool do_loop(int vkey, XY* pcursor);
+bool doActions(int vkey, XY* pcursor);
 void drawScreen();
-bool loadDialog();
+int loadDialog();
 int loadFileInfo(char* puzzles_fname);
 bool createGrids(int GS);
 void redraw_screen(uint8_t* g);
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
      */
     do {
         vkey = wait_for_any_key_press();
-        exit = do_loop(vkey, &cursor);
+        exit = doActions(vkey, &cursor);
     } while (vkey != KEY_escape && !exit);
 
     /* =========================================================
@@ -88,15 +88,20 @@ int main(int argc, char **argv) {
 
     vdp_cursor_enable(true);
     vdp_write_at_text_cursor();
-    TAB(0,3);
+    TAB(1,38);
     vdp_set_text_colour(15);
     vdp_set_graphics_colour(0,15);
     return 0; 
 }
 
-bool do_loop(int vkey, XY* pcursor)
+bool doActions(int vkey, XY* pcursor)
 {
     bool endprog = false;
+
+    // prevent key bounce
+    delay(300); // ms
+    clear_keys();
+
     switch (vkey) {
         case KEY_DOWN:
             cursorClear(pcursor);
@@ -177,26 +182,31 @@ bool do_loop(int vkey, XY* pcursor)
                 refreshBoard(grid);
                 pcursor->x = 0;
                 pcursor->y = 0;
-                cursorDraw(pcursor);
             }
+            drawScreen();
+            cursorDraw(pcursor);
             break;
         case KEY_S:
         case KEY_s:
             if (isGridComplete(grid)) {
                 const char* msg = "SAVE: Filename? ";
-                char filename[30];
+                char filename[40];
+                char filename2[40];
                 vdp_write_at_text_cursor();
                 vdp_set_text_colour(15);
                 vdp_set_graphics_colour(0,15);
                 TAB(0,1);printf("%s",spc30);
                 TAB(0,2);printf("%s",spc30);
                 TAB(0,1);printf("%s", msg);
-                fgets(&filename[0], 28, stdin);
-                if (checkFilename(&filename[0])) {
-                    saveBoard(grid, &filename[0]);
-                    delay(300); // ms
-                    clear_keys();
+                fgets(&filename[0], 40, stdin);
+                processString(filename, filename2);
+                if (checkFilename(&filename2[0])) {
+                    saveBoard(grid, &filename2[0]);
+                    printf("Saved %s",filename2);
                 }
+                delay(300); // ms
+                clear_keys();
+                wait_for_any_key();
                 vdp_set_text_colour(15);
                 vdp_set_graphics_colour(0,15);
                 TAB(0,1);printf("%s",spc30);
@@ -205,22 +215,36 @@ bool do_loop(int vkey, XY* pcursor)
             break;
         case KEY_L:
         case KEY_l:
-            // prevent key bounce
-            delay(300); // ms
-            clear_keys();
+            {
+                // Call load dialog
+                int ret = loadDialog();
+                if (ret < 0) {
+                    printf("Error!\nGOODBYE!\n");
+                    return true; // end
+                } else if (ret == 0) {
+                    printf("GOODBYE!\n");
+                    return true; // end
+                }
 
-            // Call load dialog
-            if (!loadDialog()) {
-                return -1;
+                pcursor->x = 0;
+                pcursor->y = 0;
+                cursorDraw(pcursor);
             }
-
-            pcursor->x = 0;
-            pcursor->y = 0;
-            cursorDraw(pcursor);
             break;
         case KEY_Q:
         case KEY_q:
-            if (areYouSure("QUIT: Are you sure?")) endprog = true;
+            if (areYouSure("QUIT: Are you sure?")) {
+                endprog = true;
+                CLS;
+                msgBoxModal(20,11, BRIGHT_RED, BRIGHT_YELLOW);
+                TAB(5,4);printf("GOODBYE!");
+                vdp_reset_viewports();
+                vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+                TAB(1,36);
+            } else {
+                drawScreen();
+                cursorDraw(pcursor);
+            }
             break;
     }    
     return endprog;
@@ -232,10 +256,11 @@ void drawScreen()
     title("Nonogram Editor", 6, 13);
     draw_grid();
     refreshBoard(grid);
+    refreshCounts(grid);
     viewMini(grid);
 }
 
-bool loadDialog()
+int loadDialog()
 {
     CLS;
     title("LOAD DIALOG", 4, 12);
@@ -243,7 +268,7 @@ bool loadDialog()
     int num_puzz = loadFileInfo("data/puzzles.txt");
     if (num_puzz > 0)
     {
-        TAB(0,1);
+        TAB(1,1);
         printf("Select a puzzle (1 - %d)", num_puzz);
         int line = 3; int col = 2;
         for (int i=0; i<num_puzz; i++)
@@ -257,6 +282,7 @@ bool loadDialog()
         }
         
         int sel = input_int(0,24,"Enter file number: ");
+        if (sel==0) return 0;
 
         sel--;
 
@@ -270,28 +296,28 @@ bool loadDialog()
             {
                 printf("\nFailed to create grids\n");
                 wait_for_any_key();
-                return false;
+                return -1;
             }
 
             if (!loadBoard(grid, filename))
             {
                 printf("\nFailed to load board\n");
                 wait_for_any_key();
-                return false;
+                return -1;
             }
             drawScreen();
 
         } else {
-            TAB(0,3);printf("Failed to load\n");
+            TAB(1,3);printf("Failed to load\n");
             wait_for_any_key();
-            return false;
+            return -1;
         }
     } else {
-        printf("Failed to load fileino\n");;
+        printf("Failed to load fileinfo\n");;
         wait_for_any_key();
-        return false;
+        return -1;
     }
-    return true;
+    return num_puzz;
 }
 
 // Load up the puzzle info file
@@ -301,7 +327,7 @@ int loadFileInfo(char* puzzles_fname)
     char buff[80]; char* token;
     FILE* fptr = fopen(puzzles_fname, "r");
     if (!fptr) {
-        TAB(0,3);printf("can't open %s", puzzles_fname);
+        TAB(1,3);printf("can't open %s", puzzles_fname);
     } else {
         CLS;
         if (!fgets(buff,80,fptr)) return -1;
