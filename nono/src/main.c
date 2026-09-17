@@ -41,9 +41,13 @@ bool deleteList(ULENTRY* ulfrom);
 bool undoAction(uint8_t *grid);
 bool redoAction(uint8_t *grid);
 void printUndoList();
+void helpLine(int vline, char *keystr, char *descstr);
+void showHelp(bool bDrawScreen);
 
 const char spc30[32] = "                              ";
 int main(int argc, char **argv) {
+    int vkey;
+
     /* Initialize keyboard buffer to store 16 events (key up and down) */
     kbuf_init(16);
 
@@ -59,12 +63,37 @@ int main(int argc, char **argv) {
         int a = atoi(argv[1]);
         if (a <=30 && a >=5 && (a % 5)==0) GS = a;
     }
+    init_dims(GS);
 
     XY cursor;
 
     // Init a struct to hold config info
     init_config();
 
+    CLS;
+    title("Nonograms by Robogeek", 14, 11);
+    msgBoxModal(50,28, BRIGHT_CYAN, BRIGHT_YELLOW);
+    TAB(13,5);printf("Welcome to Nonograms!");
+    setColours(WHITE, BLACK);
+    TAB(8,8);printf("a picture puzzle game for the Agon");
+    setColours(BRIGHT_YELLOW, BLACK);
+    TAB(5,22);printf("Press H for Help, any other key to start");
+    
+    vkey = wait_for_any_key_press();
+    CLS;
+    vdp_reset_viewports();
+    vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+
+    if (vkey == KEY_H || vkey == KEY_h) {
+        // prevent key bounce
+        delay(300); // ms
+        clear_keys();
+        showHelp(false);
+    }
+
+    // prevent key bounce
+    delay(300); // ms
+    clear_keys();
     if (loadDialog() > 0)
     {
 
@@ -73,7 +102,6 @@ int main(int argc, char **argv) {
         cursorDraw(&cursor);
 
         vdp_keyboard_control( 250, 500, getsysvar_keyled() );
-        int vkey;
         bool exit = false;
 
         /* =========================================================
@@ -239,6 +267,10 @@ bool doActions(int vkey, XY* pcursor)
             guess[0] = SQ_EMPTY;
             refreshBoard(guess);
             break;
+        case KEY_H:
+        case KEY_h:
+            showHelp(true);
+            break;
     }    
     return endprog;
 }
@@ -255,27 +287,60 @@ void drawScreen()
 
 int loadDialog()
 {
-    CLS;
-    title("LOAD DIALOG", 4, 12);
-
     int num_puzz = loadFileInfo("data/puzzles.txt");
     if (num_puzz > 0)
     {
-        TAB(1,1);
-        printf("Select a puzzle (1 - %d)", num_puzz);
-        int line = 3; int col = 2;
-        for (int i=0; i<num_puzz; i++)
+        int sel = 0;
+        while (sel == 0)
         {
-            TAB(col, line);
-            printf("%d: %s (%dx%d)", i+1, puzzinfo[i].title, puzzinfo[i].gs, puzzinfo[i].gs);
-            line++;
-            if (line > 20) {
-                line = 3; col += 36;
+            CLS;
+            title("LOAD DIALOG", 6, 11);
+            setColours(BRIGHT_WHITE, BLACK);
+
+            setColours(BRIGHT_YELLOW, BLACK);
+            TAB(1,2);
+            printf("Select a puzzle (1 - %d)", num_puzz);
+            setColours(BRIGHT_WHITE, BLACK);
+            int line = 4; int col = 2;
+            for (int i=0; i<num_puzz; i++)
+            {
+                TAB(col, line);
+                printf("%d: %s (%dx%d)", i+1, puzzinfo[i].title, puzzinfo[i].gs, puzzinfo[i].gs);
+                line++;
+                if (line > 20) {
+                    line = 3; col += 36;
+                }
+            }
+        
+            setColours(BRIGHT_YELLOW, BLACK);
+            centreTextInWidth("Enter File Number, H for Help or Q to quit",dims.scrHeightChars - 2, dims.scrWidthChars);
+            setColours(BRIGHT_WHITE, BLACK);
+
+            char str[64];
+            char str2[64];
+            char *scanptr;
+
+            TAB(1,24);
+            printf("Enter file number:");
+            fgets(&str[0], 64, stdin);
+            processString(str, str2);
+            if (str2[0]=='h' || str2[0]=='H') {
+                // prevent key bounce
+                delay(300); // ms
+                clear_keys();
+                showHelp(false);
+            } else if (str2[0]=='q' || str2[0]=='Q') {
+                CLS;
+                msgBoxModal(20,11, BRIGHT_RED, BRIGHT_YELLOW);
+                TAB(5,4);printf("GOODBYE!");
+                vdp_reset_viewports();
+                vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+                TAB(1,36);
+                return 0;
+            } else {
+                sel = strtol(str2, &scanptr, 0);
             }
         }
-        
-        int sel = input_int(0,24,"Enter file number: ");
-        if (sel==0) return 0;
 
         sel--;
 
@@ -594,4 +659,52 @@ void printUndoList()
         ul = ul->next;
     }
     printf("----------------------------\n");
+}
+
+void helpLine(int vline, char *keystr, char *descstr)
+{
+    int cola=32; int colb=40;
+    TAB(cola-strlen(keystr), vline); setColours(BRIGHT_YELLOW, BLACK); printf("%s", keystr);
+    setColours(WHITE, BLACK);
+    for (int i=cola+2; i<colb; i++) { printf("."); }
+    TAB(colb, vline); setColours(YELLOW, BLACK); printf("%s", descstr);
+}
+
+void showHelp(bool bDrawScreen)
+{
+    CLS;
+    int boxWidth = dims.scrWidthChars -2;
+    int boxHeight = dims.scrHeightChars -2;
+    msgBoxModal(boxWidth, boxHeight, BRIGHT_CYAN, BRIGHT_YELLOW);
+    centreTextInWidth("NONOGRAMS HELP", 2, boxWidth);
+    centreTextInWidth("==============", 3, boxWidth);
+
+    setColours(WHITE, BLACK);
+    int vline = 5;
+
+    centreTextInWidth("Nonograms are picture logic puzzles", vline++, boxWidth);
+    centreTextInWidth("in which cells in a grid must be colored or left blank", vline++, boxWidth);
+    centreTextInWidth("according to numbers at the edges of the grid", vline++, boxWidth);
+    centreTextInWidth("to reveal a hidden picture.", vline++, boxWidth); 
+    vline++;
+    centreTextInWidth("The numbers show how many unbroken lines of", vline++, boxWidth);
+    centreTextInWidth("filled-in squares there are in any given", vline++, boxWidth);
+    centreTextInWidth("row or column.", vline++, boxWidth);
+    vline+=2;
+
+    helpLine(vline, "Arrow keys, Joystick", "Move cursor"); vline+=2;
+    helpLine(vline, "<SPACE>, M", "Fill a square"); vline+=2;
+    helpLine(vline, "<DEL>, D, X", "Clear a square"); vline+=2;
+    helpLine(vline, "C", "Clear grid"); vline+=2;
+    helpLine(vline, "U / R", "Undo / Redo last operation"); vline+=2;
+    helpLine(vline,  "L", "Load new puzzle"); vline+=2;
+    helpLine(vline, "Q", "Quit"); vline+=2;
+    
+    setColours(BRIGHT_YELLOW, BLACK);
+    centreTextInWidth("Press any key",boxHeight - 4, boxWidth);
+    wait_for_any_key();
+    vdp_reset_viewports();
+    vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+    CLS;
+    if (bDrawScreen) drawScreen();
 }

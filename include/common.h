@@ -115,6 +115,9 @@ bool input_yn(int x, int y, const char *msg);
 bool areYouSure(const char *msg);
 
 void title(const char *msg, int bar_col, int title_col);
+void centreText(char *msg, int y);
+void centreTextInWidth(char *msg, int y, int width);
+void setColours(int fg, int bg);
 
 
 void wait_clock( clock_t ticks );

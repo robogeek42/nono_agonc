@@ -589,6 +589,23 @@ void msgBoxModal(int width_chars, int height_chars, int border_col, int text_col
     vdp_clear_screen(); // clear text area
 }
 
+void centreText(char *msg, int y)
+{
+    vdp_cursor_tab( (dims.scrWidthChars - strlen(msg)) / 2, y);
+    printf("%s",msg);
+}
+void centreTextInWidth(char *msg, int y, int width)
+{
+    vdp_cursor_tab( (width - strlen(msg)) / 2, y);
+    printf("%s",msg);
+}
+
+void setColours(int fg, int bg)
+{
+    vdp_set_graphics_colour(0,fg);
+    vdp_set_text_colour(fg);
+}
+
 bool checkSolution(uint8_t* guess, uint8_t* solution)
 {
     for (int i=0; i<dims.gs*dims.gs; i++) {
