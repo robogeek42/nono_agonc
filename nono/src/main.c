@@ -43,6 +43,8 @@ bool redoAction(uint8_t *grid);
 void printUndoList();
 void helpLine(int vline, char *keystr, char *descstr);
 void showHelp(bool bDrawScreen);
+void drawNono(int x, int y, int w, int h);
+void openingAnimation();
 
 const char spc30[32] = "                              ";
 int main(int argc, char **argv) {
@@ -50,6 +52,8 @@ int main(int argc, char **argv) {
 
     /* Initialize keyboard buffer to store 16 events (key up and down) */
     kbuf_init(16);
+
+    openingAnimation();
 
     vdp_mode(screen_mode);
 
@@ -708,3 +712,37 @@ void showHelp(bool bDrawScreen)
     CLS;
     if (bDrawScreen) drawScreen();
 }
+
+void drawNono(int x, int y, int w, int h)
+{
+    int gap = w / 5;
+    int xpos = x;
+    drawLetterN(xpos, y, w, h);
+    xpos += w+gap;
+    drawLetterO(xpos, y, w, h);
+    xpos += w+gap;
+    drawLetterN(xpos, y, w, h);
+    xpos += w+gap;
+    drawLetterO(xpos, y, w, h);
+}
+void openingAnimation()
+{
+    vdp_mode(129);
+    vdp_set_pixel_coordinates();
+
+    for(int s = 4; s < 140; s+= 4)
+    {
+        int w = s; int h = (s*5)/4;
+        int gap = w/5;
+        int width = (w * 4) + (gap * 3);
+        int xpos = 640/2 - (width/2);
+        int ypos = 480/2 - (h/2);
+
+        CLS;
+        drawNono(xpos, ypos, w, h);
+        vdp_swap();
+        delay(100);
+    }
+    delay(1000);
+}
+

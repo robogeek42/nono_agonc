@@ -48,6 +48,20 @@
 #define PLOT_TYPE_TRIANGLE_FILL      0x50
 #define PLOT_TYPE_R_LINEFILL         0x58
 #define PLOT_TYPE_RECT_FILL          0x60
+#define PLOT_TYPE_LR_FILL_FG         0x68
+#define PLOT_TYPE_PARA_FILL          0x70
+#define PLOT_TYPE_LR_FILL_NONFG      0x78
+#define PLOT_TYPE_FLOOD_FILL_NONBG   0x80
+#define PLOT_TYPE_FLOOD_FILL_FG      0x88
+#define PLOT_TYPE_CIRCLE_OUTLINE     0x90
+#define PLOT_TYPE_CIRCLE_FILL        0x98
+#define PLOT_TYPE_CIRCULAR_ARC       0xA0
+#define PLOT_TYPE_CIRCULAR_SEGMENT   0xA8
+#define PLOT_TYPE_CIRCULAR_SECTOR    0xB0
+#define PLOT_TYPE_RECT_COPY_MOVE     0xB8
+#define PLOT_TYPE_ELIPSE_OUTLINE     0xC0
+#define PLOT_TYPE_ELIPSE_FILL        0xC8
+#define PLOT_TYPE_FILL_PATH          0xD8
 
 #define SQ_EMPTY 0
 #define SQ_FILL  1
@@ -145,5 +159,8 @@ void refreshCounts(uint8_t* grid);
 void msgBoxModal(int width_chars, int height_chars, int border_col, int text_col);
 
 void viewMini(uint8_t* grid);
+
+void drawLetterN(int left,int right,int width,int height);
+void drawLetterO(int left,int right,int width,int height);
 
 #endif
