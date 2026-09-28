@@ -67,6 +67,8 @@
 #define SQ_FILL  1
 #define SQ_CROSS 2
 
+#define CHUNK_SIZE 1024
+
 typedef struct {
     int gs;
     int scrWidthPix;    // Screen width in pixels
@@ -82,6 +84,7 @@ typedef struct {
     int mscl;       // mini grid scale(pixels)
     int moffx;      // mini grid offset x
     int moffy;      // mini grid offset y
+    int max_nums;
 } DIMS;
 
 typedef struct {
@@ -162,5 +165,8 @@ void viewMini(uint8_t* grid);
 
 void drawLetterN(int left,int right,int width,int height);
 void drawLetterO(int left,int right,int width,int height);
+void drawLetterG(int left,int right,int width,int height);
+
+int load_bitmap_file( const char *fname, int width, int height, int bmap_id );
 
 #endif

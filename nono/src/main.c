@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     /* Initialize keyboard buffer to store 16 events (key up and down) */
     kbuf_init(16);
 
-    openingAnimation();
+    //openingAnimation();
 
     vdp_mode(screen_mode);
 
@@ -76,13 +76,22 @@ int main(int argc, char **argv) {
 
     CLS;
     title("Nonograms by Robogeek", 14, 11);
-    msgBoxModal(50,28, BRIGHT_CYAN, BRIGHT_YELLOW);
-    TAB(13,5);printf("Welcome to Nonograms!");
-    setColours(WHITE, BLACK);
-    TAB(8,8);printf("a picture puzzle game for the Agon");
-    setColours(BRIGHT_YELLOW, BLACK);
-    TAB(5,22);printf("Press H for Help, any other key to start");
+    int bm_width = 280;
+    int bm_height = 56;
+    if (load_bitmap_file("img/nono.rgb2", bm_width, bm_height, 0)==0)
+    {
+        vdp_select_bitmap(0);
+        vdp_draw_bitmap((dims.scrWidthPix-bm_width)/2,120);
+    }
     
+    //msgBoxModal(50,28, BRIGHT_CYAN, BRIGHT_YELLOW);
+    setColours(BRIGHT_YELLOW, BLACK);
+    centreText("Welcome to Nonograms!", 7);
+    setColours(WHITE, BLACK);
+    centreText("a picture puzzle game for the Agon", 9);
+    setColours(BRIGHT_YELLOW, BLACK);
+    centreText("Press H for Help, any other key to start", dims.scrHeightChars-3);
+
     vkey = wait_for_any_key_press();
     CLS;
     vdp_reset_viewports();
@@ -105,7 +114,7 @@ int main(int argc, char **argv) {
         cursor.y = 0;
         cursorDraw(&cursor);
 
-        vdp_keyboard_control( 250, 500, getsysvar_keyled() );
+        vdp_keyboard_control( 200, 300, getsysvar_keyled() );
         bool exit = false;
 
         /* =========================================================
@@ -136,10 +145,6 @@ int main(int argc, char **argv) {
 bool doActions(int vkey, XY* pcursor)
 {
     bool endprog = false;
-
-    // prevent key bounce
-    delay(300); // ms
-    clear_keys();
 
     switch (vkey) {
         case KEY_DOWN:
@@ -193,6 +198,10 @@ bool doActions(int vkey, XY* pcursor)
             break;
         case KEY_C:
         case KEY_c:
+            // prevent key bounce
+            delay(200); // ms
+            clear_keys();
+
             if (areYouSure("CLEAR: Are you sure?"))
             {
                 XY pos;
@@ -212,6 +221,10 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_L:
         case KEY_l:
             {
+                // prevent key bounce
+                delay(200); // ms
+                clear_keys();
+
                 // Call load dialog
                 int ret = loadDialog();
                 if (ret < 0) {
@@ -235,6 +248,10 @@ bool doActions(int vkey, XY* pcursor)
 
         case KEY_Q:
         case KEY_q:
+            // prevent key bounce
+            delay(200); // ms
+            clear_keys();
+
             if (areYouSure("QUIT: Are you sure?")) {
                 endprog = true;
                 CLS;
@@ -273,7 +290,12 @@ bool doActions(int vkey, XY* pcursor)
             break;
         case KEY_H:
         case KEY_h:
+            // prevent key bounce
+            delay(200); // ms
+            clear_keys();
+
             showHelp(true);
+            cursorDraw(pcursor);
             break;
     }    
     return endprog;
@@ -745,4 +767,5 @@ void openingAnimation()
     }
     delay(1000);
 }
+
 

@@ -18,9 +18,9 @@ void init_dims(int gs)
     dims.scrHeightChars = getsysvar_scrRows();
 
     // must leave space for enough 8x8 numbers above grid
-    int max_nums = ((int) (gs/2)) + 1;
+    dims.max_nums = ((int) (gs/2)) + 1;
 
-    dims.gheight = dims.scrHeightPix - (8 * max_nums) - border; 
+    dims.gheight = dims.scrHeightPix - (8 * dims.max_nums) - border; 
 
     // if grid height is > 3/4 of the screen, scale it back
     if (dims.gheight > (border + (dims.scrHeightPix * 3) / 4)) {
@@ -113,19 +113,31 @@ void title(const char *msg, int bar_col, int title_col)
     vdp_set_graphics_colour(0, BRIGHT_WHITE);
 }
 
-void cursorClear(XY* pos)
+void cursorClear(XY* cursor)
 {
     vdp_move_to(
-            dims.offx + (pos->x * dims.sclx),
-            dims.offy + (pos->y * dims.scly));
-    if (pos->y % 5 == 0) vdp_gcol(0, config.col_gridmaj); else vdp_gcol(0, config.col_gridmin);
+            dims.offx + (cursor->x * dims.sclx),
+            dims.offy + (cursor->y * dims.scly));
+    if (cursor->y % 5 == 0) vdp_gcol(0, config.col_gridmaj); else vdp_gcol(0, config.col_gridmin);
     vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, dims.sclx, 0);
-    if (pos->x % 5 == 4) vdp_gcol(0, config.col_gridmaj); else vdp_gcol(0, config.col_gridmin);
+    if (cursor->x % 5 == 4) vdp_gcol(0, config.col_gridmaj); else vdp_gcol(0, config.col_gridmin);
     vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0, dims.scly);
-    if (pos->y % 5 == 4) vdp_gcol(0, config.col_gridmaj); else vdp_gcol(0, config.col_gridmin);
+    if (cursor->y % 5 == 4) vdp_gcol(0, config.col_gridmaj); else vdp_gcol(0, config.col_gridmin);
     vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, -dims.sclx, 0);
-    if (pos->x % 5 == 0) vdp_gcol(0, config.col_gridmaj); else vdp_gcol(0, config.col_gridmin);
+    if (cursor->x % 5 == 0) vdp_gcol(0, config.col_gridmaj); else vdp_gcol(0, config.col_gridmin);
     vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0, -dims.scly);
+
+    vdp_move_to(dims.offx + cursor->x * dims.sclx, dims.offy - 8*dims.max_nums);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_BG_REL, dims.sclx, 0);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_BG_REL, 0, 8*dims.max_nums);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_BG_REL, -dims.sclx, 0);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_BG_REL, 0, -8*dims.max_nums);
+
+    vdp_move_to((dims.offx - 8*dims.max_nums), dims.offy + cursor->y * dims.scly);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_BG_REL, 8*dims.max_nums, 0);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_BG_REL, 0, dims.scly);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_BG_REL, -8*dims.max_nums, 0);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_BG_REL, 0, -dims.scly);
 }
 
 void cursorDraw(XY* cursor)
@@ -135,6 +147,19 @@ void cursorDraw(XY* cursor)
     vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, dims.sclx, 0);
     vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0, dims.scly);
     vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, -dims.sclx, 0);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0, -dims.scly);
+
+    vdp_gcol(0, config.col_gridmaj);
+    vdp_move_to(dims.offx + cursor->x * dims.sclx, dims.offy - 8*dims.max_nums);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, dims.sclx, 0);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0, 8*dims.max_nums);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, -dims.sclx, 0);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0, -8*dims.max_nums);
+
+    vdp_move_to((dims.offx - 8*dims.max_nums), dims.offy + cursor->y * dims.scly);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 8*dims.max_nums, 0);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0, dims.scly);
+    vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, -8*dims.max_nums, 0);
     vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0, -dims.scly);
 }
 
@@ -667,3 +692,47 @@ void drawLetterO(int x,int y,int width,int height)
 void drawLetterG(int x,int y,int width,int height)
 {
 }
+
+int load_bitmap_file( const char *fname, int width, int height, int bmap_id )
+{
+	FILE *fp;
+	char *buffer;
+	int bytes_remain = width * height;
+
+	if ( !(buffer = (char *)malloc( CHUNK_SIZE ) ) ) {
+		printf( "Failed to allocate %d bytes for buffer.\n",CHUNK_SIZE );
+		return -1;
+	}
+	if ( !(fp = fopen( fname, "rb" ) ) ) {
+		printf( "Error opening file \"%s\". Quitting.\n", fname );
+		return -1;
+	}
+
+	vdp_adv_clear_buffer(0xFA00+bmap_id);
+
+	bytes_remain = width * height;
+
+	while (bytes_remain > 0)
+	{
+		int size = (bytes_remain>CHUNK_SIZE)?CHUNK_SIZE:bytes_remain;
+
+		vdp_adv_write_block(0xFA00+bmap_id, size);
+
+		if ( fread( buffer, 1, size, fp ) != (size_t)size ) return 0;
+		mos_puts( buffer, size, 0 );
+		//printf(".");
+
+		bytes_remain -= size;
+	}
+	vdp_adv_consolidate(0xFA00+bmap_id);
+
+	vdp_select_bitmap(bmap_id);
+	vdp_adv_bitmap_from_buffer(width, height, 1); // RGBA2
+	printf("\n");
+	
+	fclose( fp );
+	free( buffer );
+
+	return 0;
+}
+
