@@ -28,6 +28,9 @@ CONFIG config;
 DIMS dims;
 ULENTRY *ulist=NULL, *ulist_current=NULL;
 
+int bm_width = 280; int bm_height = 56;
+int bms_width = 210; int bms_height = 42;
+
 bool doActions(int vkey, XY* pcursor);
 void drawScreen();
 int loadDialog();
@@ -76,13 +79,10 @@ int main(int argc, char **argv) {
 
     CLS;
     title("Nonograms by Robogeek", 14, 11);
-    int bm_width = 280;
-    int bm_height = 56;
-    if (load_bitmap_file("nono.rgb2", bm_width, bm_height, 0)==0)
-    {
-        vdp_select_bitmap(0);
-        vdp_draw_bitmap((dims.scrWidthPix-bm_width)/2,120);
-    }
+    load_bitmap_file("nono.rgb2", bm_width, bm_height, 0);
+    load_bitmap_file("nono_small.rgb2", bms_width, bms_height, 1);
+    vdp_select_bitmap(0);
+    vdp_draw_bitmap((dims.scrWidthPix-bm_width)/2,120);
     
     //msgBoxModal(50,28, BRIGHT_CYAN, BRIGHT_YELLOW);
     setColours(BRIGHT_YELLOW, BLACK);
@@ -291,7 +291,7 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_H:
         case KEY_h:
             // prevent key bounce
-            delay(200); // ms
+            delay(300); // ms
             clear_keys();
 
             showHelp(true);
@@ -305,8 +305,8 @@ void drawScreen()
 {
     CLS;
     title("Nonograms by Robogeek", 14, 11);
-    // vdp_select_bitmap(0);
-    // vdp_draw_bitmap(0,8);
+    vdp_select_bitmap(1);
+    vdp_draw_bitmap(0,8);
     draw_grid();
     refreshBoard(guess);
     refreshCounts(grid);
@@ -704,11 +704,15 @@ void showHelp(bool bDrawScreen)
     int boxWidth = dims.scrWidthChars -2;
     int boxHeight = dims.scrHeightChars -2;
     msgBoxModal(boxWidth, boxHeight, BRIGHT_CYAN, BRIGHT_YELLOW);
-    centreTextInWidth("NONOGRAMS HELP", 2, boxWidth);
-    centreTextInWidth("==============", 3, boxWidth);
+
+    vdp_select_bitmap(0);
+    vdp_draw_bitmap((boxWidth*8-bm_width)/2,16);
+
+    //centreTextInWidth("NONOGRAMS HELP", 5, boxWidth);
+    //centreTextInWidth("==============", 6, boxWidth);
 
     setColours(WHITE, BLACK);
-    int vline = 5;
+    int vline = 9;
 
     centreTextInWidth("Nonograms are picture logic puzzles", vline++, boxWidth);
     centreTextInWidth("in which cells in a grid must be colored or left blank", vline++, boxWidth);

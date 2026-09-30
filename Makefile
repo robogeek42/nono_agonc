@@ -50,7 +50,8 @@ install: $(BINARIES)
 	@mkdir -p $(SD_INSTALL_DIR)/data
 	@rm -f $(SD_INSTALL_DIR)/data/*
 	@cp -rf data/* $(SD_INSTALL_DIR)/data/
-	
+	@cp -rf nono*.rgb2 $(SD_INSTALL_DIR)/
+
 clean:
 	@rm -f $(BINARIES)
 	@cd nono; make clean
@@ -63,9 +64,11 @@ clean:
 
 
 emu: $(BINARIES)
-	cp $(BINARIES) $(FAE_HOME)/sdcard/
-	cp -rf data $(FAE_HOME)/sdcard/
-	cd $(FAE_HOME) ; $(FAE_HOME)/fab-agon-emulator $(FAE_ARGS)
+	@echo Copy files
+	@cp $(BINARIES) $(FAE_HOME)/sdcard/
+	@cp -rf data $(FAE_HOME)/sdcard/
+	@cp -rf nono*.rgb2 $(FAE_HOME)/sdcard/
+	@cd $(FAE_HOME) ; $(FAE_HOME)/fab-agon-emulator $(FAE_ARGS)
 
 
 sendbins: $(BINARIES)
@@ -73,3 +76,6 @@ sendbins: $(BINARIES)
 	asend nono.bin
 	asend nonoed.bin
 
+sendnono: nono.bin
+	acmd cd /nono
+	asend nono.bin
