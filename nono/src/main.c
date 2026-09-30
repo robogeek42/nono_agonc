@@ -47,12 +47,12 @@ void drawNono(int x, int y, int w, int h);
 void openingAnimation();
 
 const char spc30[32] = "                              ";
+
 int main(int argc, char **argv) {
     int vkey;
 
     /* Initialize keyboard buffer to store 16 events (key up and down) */
     kbuf_init(16);
-
     //openingAnimation();
 
     vdp_mode(screen_mode);
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     title("Nonograms by Robogeek", 14, 11);
     int bm_width = 280;
     int bm_height = 56;
-    if (load_bitmap_file("img/nono.rgb2", bm_width, bm_height, 0)==0)
+    if (load_bitmap_file("nono.rgb2", bm_width, bm_height, 0)==0)
     {
         vdp_select_bitmap(0);
         vdp_draw_bitmap((dims.scrWidthPix-bm_width)/2,120);
@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
         cursor.y = 0;
         cursorDraw(&cursor);
 
-        vdp_keyboard_control( 200, 300, getsysvar_keyled() );
+        vdp_keyboard_control( 200, 50, getsysvar_keyled() );
         bool exit = false;
 
         /* =========================================================
@@ -305,6 +305,8 @@ void drawScreen()
 {
     CLS;
     title("Nonograms by Robogeek", 14, 11);
+    // vdp_select_bitmap(0);
+    // vdp_draw_bitmap(0,8);
     draw_grid();
     refreshBoard(guess);
     refreshCounts(grid);
@@ -767,5 +769,4 @@ void openingAnimation()
     }
     delay(1000);
 }
-
 
