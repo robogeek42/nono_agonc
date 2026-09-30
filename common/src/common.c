@@ -736,3 +736,15 @@ int load_bitmap_file( const char *fname, int width, int height, int bmap_id )
 	return 0;
 }
 
+KEYSTATE keystates[5];
+
+void initKeyStates()
+{
+    keystates[0].vkey = KEY_space; keystates[0].pressed = false;
+    keystates[1].vkey = KEY_x; keystates[1].pressed = false;
+}
+void updateKeyStates()
+{
+}
+
+
