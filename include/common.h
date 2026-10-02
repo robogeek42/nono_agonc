@@ -69,6 +69,8 @@
 
 #define CHUNK_SIZE 1024
 
+#define NUMKEYSTATES 256
+
 typedef struct {
     int gs;
     int scrWidthPix;    // Screen width in pixels
@@ -111,12 +113,6 @@ struct ULENTRY_T {
 };
 
 typedef struct ULENTRY_T ULENTRY;
-
-typedef struct {
-    uint8_t vkey;
-    bool pressed;
-} KEYSTATE;
-
 
 void init_dims(int gs);
 void init_config();
@@ -174,7 +170,9 @@ void drawLetterG(int left,int right,int width,int height);
 
 int load_bitmap_file( const char *fname, int width, int height, int bmap_id );
 
-#define NUMKEYSTATES 2
-void updateKeyStates();
+void clearKeyStates();
+uint8_t doKeyPoll();
+uint8_t wait_for_keypoll();
+uint8_t getKeyState(uint8_t vkey);
 
 #endif

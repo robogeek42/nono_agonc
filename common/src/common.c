@@ -352,55 +352,6 @@ bool calc_row_run(uint8_t* grid, int row)
     return true;
 }
 
-// clear keyboard buffer
-void clear_keys()
-{
-    struct keyboard_event_t e;
-    while (kbuf_poll_event(&e)) {}
-}
-// return after specific key is pressed
-uint8_t wait_for_key(uint8_t key)
-{
-    struct keyboard_event_t e;
-    do {
-        while (!kbuf_poll_event(&e)) {}
-    } while (e.vkey != key);
-    return key;
-}
-// return after specific key is released
-uint8_t wait_for_key_up(uint8_t key)
-{
-    struct keyboard_event_t e;
-    do {
-        while (!kbuf_poll_event(&e)) {}
-    } while (e.vkey != key && e.isdown);
-    return key;
-}
-// return after key is released
-uint8_t wait_for_any_key()
-{
-    struct keyboard_event_t e;
-    int gotkey = 0;
-    do {
-        int ret = kbuf_poll_event(&e);
-        if (ret && !e.isdown) gotkey = 1;
-    } while ( gotkey == 0 );
-
-    return e.vkey;
-}
-// return after key-down event
-uint8_t wait_for_any_key_press()
-{
-    struct keyboard_event_t e;
-    int gotkey = 0;
-    do {
-        int ret = kbuf_poll_event(&e);
-        if (ret && e.isdown) gotkey = 1;
-    } while ( gotkey == 0 );
-
-    return e.vkey;
-}
-
 void wait_clock( clock_t ticks )
 {
     clock_t ticks_now = clock();
@@ -735,16 +686,4 @@ int load_bitmap_file( const char *fname, int width, int height, int bmap_id )
 
 	return 0;
 }
-
-KEYSTATE keystates[5];
-
-void initKeyStates()
-{
-    keystates[0].vkey = KEY_space; keystates[0].pressed = false;
-    keystates[1].vkey = KEY_x; keystates[1].pressed = false;
-}
-void updateKeyStates()
-{
-}
-
 

@@ -26,6 +26,8 @@ PUZZINFO* puzzinfo;
 CONFIG config;
 DIMS dims;
 
+//uint8_t keystates[NUMKEYSTATES];
+
 bool doActions(int vkey, XY* pcursor);
 void drawScreen();
 int loadDialog();

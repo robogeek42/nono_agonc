@@ -28,6 +28,8 @@ CONFIG config;
 DIMS dims;
 ULENTRY *ulist=NULL, *ulist_current=NULL;
 
+//uint8_t keystates[NUMKEYSTATES];
+
 int bm_width = 280; int bm_height = 56;
 int bms_width = 210; int bms_height = 42;
 
@@ -76,7 +78,7 @@ int main(int argc, char **argv) {
 
     // Init a struct to hold config info
     init_config();
-
+    
     CLS;
     title("Nonograms by Robogeek", 14, 11);
     load_bitmap_file("nono.rgb2", bm_width, bm_height, 0);
@@ -121,7 +123,7 @@ int main(int argc, char **argv) {
          * MAIN LOOP 
          */
         do {
-            vkey = wait_for_any_key_press();
+            vkey = wait_for_keypoll();
             exit = doActions(vkey, &cursor);
         } while (vkey != KEY_escape && !exit);
 
@@ -142,59 +144,103 @@ int main(int argc, char **argv) {
     return 0; 
 }
 
+void doMark(XY* pcursor)
+{
+    cursorClear(pcursor);
+    addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_FILL);
+    set_grid(guess, pcursor, SQ_FILL);
+    redrawGridSquare(guess, pcursor);
+    checkWin();
+    cursorDraw(pcursor);
+}
+void doCross(XY* pcursor)
+{
+    cursorClear(pcursor);
+    addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_CROSS);
+    set_grid(guess, pcursor, SQ_CROSS);
+    redrawGridSquare(guess, pcursor);
+    checkWin();
+    cursorDraw(pcursor);
+}
+void doDelete(XY* pcursor)
+{
+    cursorClear(pcursor);
+    addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_EMPTY);
+    set_grid(guess, pcursor, SQ_EMPTY);
+    redrawGridSquare(guess, pcursor);
+    cursorDraw(pcursor);
+}
+
+void checkRepeatableActions(XY* pcursor)
+{
+    if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true) doCross(pcursor);
+    if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true) doMark(pcursor);
+    if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true) doDelete(pcursor);
+}
+
 bool doActions(int vkey, XY* pcursor)
 {
     bool endprog = false;
 
     switch (vkey) {
         case KEY_DOWN:
-            cursorClear(pcursor);
-            pcursor->y = (pcursor->y + 1) % dims.gs;
-            cursorDraw(pcursor);
+            if (getKeyState(KEY_DOWN)==true)
+            {
+                cursorClear(pcursor);
+                pcursor->y = (pcursor->y + 1) % dims.gs;
+                cursorDraw(pcursor);
+            }
+            checkRepeatableActions(pcursor);
             break;
         case KEY_UP:
-            cursorClear(pcursor);
-            pcursor->y = (pcursor->y - 1 + dims.gs) % dims.gs;
-            cursorDraw(pcursor);
+            if (getKeyState(KEY_UP)==true)
+            {
+                cursorClear(pcursor);
+                pcursor->y = (pcursor->y - 1 + dims.gs) % dims.gs;
+                cursorDraw(pcursor);
+            }
+            checkRepeatableActions(pcursor);
             break;
         case KEY_RIGHT:
-            cursorClear(pcursor);
-            pcursor->x = (pcursor->x + 1) % dims.gs;
-            cursorDraw(pcursor);
+            if (getKeyState(KEY_RIGHT)==true)
+            {
+                cursorClear(pcursor);
+                pcursor->x = (pcursor->x + 1) % dims.gs;
+                cursorDraw(pcursor);
+            }
+            checkRepeatableActions(pcursor);
             break;
         case KEY_LEFT:
-            cursorClear(pcursor);
-            pcursor->x = (pcursor->x - 1 + dims.gs) % dims.gs;
-            cursorDraw(pcursor);
+            if (getKeyState(KEY_LEFT)==true)
+            {
+                cursorClear(pcursor);
+                pcursor->x = (pcursor->x - 1 + dims.gs) % dims.gs;
+                cursorDraw(pcursor);
+            }
+            checkRepeatableActions(pcursor);
             break;
         case KEY_X:
         case KEY_x:
-            cursorClear(pcursor);
-            addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_CROSS);
-            set_grid(guess, pcursor, SQ_CROSS);
-            redrawGridSquare(guess, pcursor);
-            checkWin();
-            cursorDraw(pcursor);
+            if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true)
+            {
+                doCross(pcursor);
+            }
             break;
         case KEY_space:
         case KEY_M:
         case KEY_m:
-            cursorClear(pcursor);
-            addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_FILL);
-            set_grid(guess, pcursor, SQ_FILL);
-            redrawGridSquare(guess, pcursor);
-            checkWin();
-            cursorDraw(pcursor);
-
+            if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true)
+            {
+                doMark(pcursor);
+            }
             break;
         case KEY_delete:
         case KEY_D:
         case KEY_d:
-            cursorClear(pcursor);
-            addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_EMPTY);
-            set_grid(guess, pcursor, SQ_EMPTY);
-            redrawGridSquare(guess, pcursor);
-            cursorDraw(pcursor);
+            if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true)
+            {
+                doDelete(pcursor);
+            }
             break;
         case KEY_C:
         case KEY_c:
