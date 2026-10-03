@@ -44,7 +44,7 @@ void checkWin();
 bool addUndo(uint8_t x, uint8_t y, uint8_t old_state, uint8_t new_state);
 bool deleteList(ULENTRY* ulfrom);
 bool undoAction(uint8_t *grid);
-bool redoAction(uint8_t *grid);
+bool replayUndoAction(uint8_t *grid);
 void printUndoList();
 void helpLine(int vline, char *keystr, char *descstr);
 void showHelp(bool bDrawScreen);
@@ -52,6 +52,9 @@ void drawNono(int x, int y, int w, int h);
 void openingAnimation();
 
 const char spc30[32] = "                              ";
+
+int holdCount = 0;
+void debugPrep(int X, int Y, int W, int H, int COL);
 
 int main(int argc, char **argv) {
     int vkey;
@@ -125,6 +128,12 @@ int main(int argc, char **argv) {
         do {
             vkey = wait_for_keypoll();
             exit = doActions(vkey, &cursor);
+
+            // Show Hold Count
+            debugPrep(dims.scrWidthChars - 3, 1, 2, 1, BRIGHT_WHITE);
+            if (holdCount > 0) {
+                printf("%02d",holdCount);
+            }
         } while (vkey != KEY_escape && !exit);
 
     }
@@ -171,11 +180,22 @@ void doDelete(XY* pcursor)
     cursorDraw(pcursor);
 }
 
-void checkRepeatableActions(XY* pcursor)
+bool checkRepeatableActions(XY* pcursor)
 {
-    if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true) doCross(pcursor);
-    if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true) doMark(pcursor);
-    if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true) doDelete(pcursor);
+    bool repeatable = false;
+    if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true) {
+        doCross(pcursor); repeatable=true;
+    }
+    if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true) {
+        doMark(pcursor); repeatable=true;
+    }
+    if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true) {
+        doDelete(pcursor); repeatable=true;
+    }
+    if (getKeyState(KEY_Z)==true || getKeyState(KEY_z)==true) {
+        repeatable=true;
+    }
+    return repeatable;
 }
 
 bool doActions(int vkey, XY* pcursor)
@@ -189,8 +209,12 @@ bool doActions(int vkey, XY* pcursor)
                 cursorClear(pcursor);
                 pcursor->y = (pcursor->y + 1) % dims.gs;
                 cursorDraw(pcursor);
+                if (checkRepeatableActions(pcursor)) {
+                    holdCount++;
+                } else {
+                    holdCount = 0;
+                }
             }
-            checkRepeatableActions(pcursor);
             break;
         case KEY_UP:
             if (getKeyState(KEY_UP)==true)
@@ -198,8 +222,12 @@ bool doActions(int vkey, XY* pcursor)
                 cursorClear(pcursor);
                 pcursor->y = (pcursor->y - 1 + dims.gs) % dims.gs;
                 cursorDraw(pcursor);
+                if (checkRepeatableActions(pcursor)) {
+                    holdCount++;
+                } else {
+                    holdCount = 0;
+                }
             }
-            checkRepeatableActions(pcursor);
             break;
         case KEY_RIGHT:
             if (getKeyState(KEY_RIGHT)==true)
@@ -207,8 +235,12 @@ bool doActions(int vkey, XY* pcursor)
                 cursorClear(pcursor);
                 pcursor->x = (pcursor->x + 1) % dims.gs;
                 cursorDraw(pcursor);
+                if (checkRepeatableActions(pcursor)) {
+                    holdCount++;
+                } else {
+                    holdCount = 0;
+                }
             }
-            checkRepeatableActions(pcursor);
             break;
         case KEY_LEFT:
             if (getKeyState(KEY_LEFT)==true)
@@ -216,14 +248,18 @@ bool doActions(int vkey, XY* pcursor)
                 cursorClear(pcursor);
                 pcursor->x = (pcursor->x - 1 + dims.gs) % dims.gs;
                 cursorDraw(pcursor);
+                if (checkRepeatableActions(pcursor)) {
+                    holdCount++;
+                } else {
+                    holdCount = 0;
+                }
             }
-            checkRepeatableActions(pcursor);
             break;
         case KEY_X:
         case KEY_x:
             if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true)
             {
-                doCross(pcursor);
+                doCross(pcursor); holdCount=1;
             }
             break;
         case KEY_space:
@@ -231,7 +267,7 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_m:
             if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true)
             {
-                doMark(pcursor);
+                doMark(pcursor); holdCount=1;
             }
             break;
         case KEY_delete:
@@ -239,7 +275,19 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_d:
             if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true)
             {
-                doDelete(pcursor);
+                doDelete(pcursor); holdCount=1;
+            }
+            break;
+        case KEY_Z:
+        case KEY_z:
+            // Z key can be used to count spaces without changing them
+            if (getKeyState(KEY_Z)==true || getKeyState(KEY_z)==true)
+            {
+                if (checkRepeatableActions(pcursor)) {
+                    holdCount++;
+                } else {
+                    holdCount = 0;
+                }
             }
             break;
         case KEY_C:
@@ -289,6 +337,9 @@ bool doActions(int vkey, XY* pcursor)
                 pcursor->x = 0;
                 pcursor->y = 0;
                 cursorDraw(pcursor);
+                // prevent key bounce
+                delay(200); // ms
+                clear_keys();
             }
             break;
 
@@ -306,6 +357,9 @@ bool doActions(int vkey, XY* pcursor)
                 vdp_reset_viewports();
                 vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
                 TAB(1,36);
+                // prevent key bounce
+                delay(200); // ms
+                clear_keys();
             } else {
                 drawScreen();
                 cursorDraw(pcursor);
@@ -314,19 +368,21 @@ bool doActions(int vkey, XY* pcursor)
 
         case KEY_U:
         case KEY_u:
-            undoAction(guess);
+            if (getKeyState(KEY_U)==true || getKeyState(KEY_u)==true)
+            {
+                undoAction(guess);
+            }
             break;
 
         case KEY_R:
         case KEY_r:
-            redoAction(guess);
+            if (getKeyState(KEY_R)==true || getKeyState(KEY_r)==true)
+            {
+                replayUndoAction(guess);
+            }
             break;
 
         case KEY_backtick:
-            break;
-
-        case KEY_T:
-        case KEY_t:
             // testing only
             for (int i=0; i<dims.gs*dims.gs; i++) {
                 guess[i] = grid[i];
@@ -538,9 +594,7 @@ void checkWin()
 //   3. Current is in mid list (next != NULL)
 bool addUndo(uint8_t x, uint8_t y, uint8_t old_state, uint8_t new_state)
 {
-    //vdp_gcol(0,0); vdp_filled_rectangle(0,8,20*8,2*8);
-    //vdp_gcol(0,15); vdp_set_text_colour(15);
-    //TAB(1,1); printf("save %d,%d %d %d\n", x, y, old_state, new_state);
+    //debugPrep(22,1,20,1,15);printf("save %d,%d %d %d\n", x, y, old_state, new_state);
     // Type 1 : No list yet
     if (!ulist)
     {
@@ -565,11 +619,18 @@ bool addUndo(uint8_t x, uint8_t y, uint8_t old_state, uint8_t new_state)
 
     // Check ulist_current is set
     if (!ulist_current) {
-        vdp_gcol(0,15); vdp_set_text_colour(15);
-        printf("error current-ptr is NULL!\n");
-        delay(5000);
-        clear_keys();
-        wait_for_any_key();
+        //vdp_gcol(0,15); vdp_set_text_colour(15);
+        //printf("error current-ptr is NULL!\n");
+        //delay(5000);
+        //clear_keys();
+        //wait_for_any_key();
+        ulist->next = NULL;  // indicates tail
+        ulist->prev = NULL;  // indicates head
+        ulist->x = x;
+        ulist->y = y;
+        ulist->old_state = old_state;
+        ulist->new_state = new_state;
+        ulist_current = ulist;
         return true;
     }
 
@@ -663,15 +724,20 @@ bool deleteList(ULENTRY* ulfrom)
     return true;
 }
 
+// move back through undo list, undoing the actions
 bool undoAction(uint8_t *g)
 {
-    if (!ulist) return false;
+    if (!ulist) {
+        //debugPrep(22,1,20,1,9); printf("no ulist");
+        return false;
+    }
 
-    if (!ulist_current) return false;
+    if (!ulist_current) {
+        //debugPrep(22,1,20,1,9); printf("no ulist_current");
+        return false;
+    }
 
-    //vdp_gcol(0,0); vdp_filled_rectangle(0,8,20*8,2*8);
-    //vdp_gcol(0,15); vdp_set_text_colour(15);
-    //TAB(1,1); printf("undo %d,%d %d %d\n", ulist_current->x, ulist_current->y, ulist_current->old_state, ulist_current->new_state);
+    //debugPrep(22,1,20,1,15); printf("undo %d,%d %d %d\n", ulist_current->x, ulist_current->y, ulist_current->old_state, ulist_current->new_state);
 
     // redraw to the saved state
     XY upos;
@@ -685,7 +751,7 @@ bool undoAction(uint8_t *g)
     return true;
 }
 
-bool redoAction(uint8_t *g)
+bool replayUndoAction(uint8_t *g)
 {
     ULENTRY *ul;
 
@@ -699,11 +765,12 @@ bool redoAction(uint8_t *g)
     }
 
     // at end of undo list
-    if (!ul) return true;
+    if (!ul) {
+        //debugPrep(22,1,20,1,11); printf("End of list");
+        return true;
+    }
 
-    //vdp_gcol(0,0); vdp_filled_rectangle(0,8,20*8,2*8);
-    //vdp_gcol(0,15); vdp_set_text_colour(15);
-    //TAB(1,1); printf("redo %d,%d %d %d\n", ul->x, ul->y, ul->old_state, ul->new_state);
+    //debugPrep(22,1,20,1,15); printf("redo %d,%d %d %d\n", ul->x, ul->y, ul->old_state, ul->new_state);
 
     // redraw the saved state
     XY upos;
@@ -820,3 +887,9 @@ void openingAnimation()
     delay(1000);
 }
 
+void debugPrep(int X, int Y, int W, int H, int COL)
+{
+    vdp_gcol(0,0); vdp_filled_rectangle(X*8,Y*8,(X+W)*8,(Y+H)*8);
+    vdp_gcol(0,COL); vdp_set_text_colour(COL);
+    TAB(X,Y);
+}
