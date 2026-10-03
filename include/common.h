@@ -66,6 +66,8 @@
 #define SQ_EMPTY 0
 #define SQ_FILL  1
 #define SQ_CROSS 2
+#define SQ_MEMOA 3
+#define SQ_MEMOB 4
 
 #define CHUNK_SIZE 1024
 
@@ -96,6 +98,8 @@ typedef struct {
     int col_mark;       // Mark colour
     int col_cross;      // Cross colour
     int col_cursor;     // Cursor colour
+    int col_memoa;      // memo A
+    int col_memob;      // memo B
 } CONFIG;
 
 typedef struct {

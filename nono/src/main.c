@@ -47,6 +47,7 @@ bool undoAction(uint8_t *grid);
 bool replayUndoAction(uint8_t *grid);
 void printUndoList();
 void helpLine(int vline, char *keystr, char *descstr);
+void helpLine2(int vline, char *keystr, char *descstr, char*descstr2);
 void showHelp(bool bDrawScreen);
 void drawNono(int x, int y, int w, int h);
 void openingAnimation();
@@ -114,6 +115,8 @@ int main(int argc, char **argv) {
     clear_keys();
     if (loadDialog() > 0)
     {
+        delay(300); // ms
+        clear_keys();
 
         cursor.x = 0;
         cursor.y = 0;
@@ -153,30 +156,13 @@ int main(int argc, char **argv) {
     return 0; 
 }
 
-void doMark(XY* pcursor)
+void doMark(XY* pcursor, uint8_t type)
 {
     cursorClear(pcursor);
-    addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_FILL);
-    set_grid(guess, pcursor, SQ_FILL);
+    addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), type);
+    set_grid(guess, pcursor, type);
     redrawGridSquare(guess, pcursor);
-    checkWin();
-    cursorDraw(pcursor);
-}
-void doCross(XY* pcursor)
-{
-    cursorClear(pcursor);
-    addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_CROSS);
-    set_grid(guess, pcursor, SQ_CROSS);
-    redrawGridSquare(guess, pcursor);
-    checkWin();
-    cursorDraw(pcursor);
-}
-void doDelete(XY* pcursor)
-{
-    cursorClear(pcursor);
-    addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), SQ_EMPTY);
-    set_grid(guess, pcursor, SQ_EMPTY);
-    redrawGridSquare(guess, pcursor);
+    if (type==SQ_FILL || type==SQ_CROSS) checkWin();
     cursorDraw(pcursor);
 }
 
@@ -184,16 +170,22 @@ bool checkRepeatableActions(XY* pcursor)
 {
     bool repeatable = false;
     if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true) {
-        doCross(pcursor); repeatable=true;
+        doMark(pcursor, SQ_CROSS); repeatable=true;
     }
     if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true) {
-        doMark(pcursor); repeatable=true;
+        doMark(pcursor, SQ_FILL); repeatable=true;
     }
     if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true) {
-        doDelete(pcursor); repeatable=true;
+        doMark(pcursor, SQ_EMPTY); repeatable=true;
     }
     if (getKeyState(KEY_Z)==true || getKeyState(KEY_z)==true) {
         repeatable=true;
+    }
+    if (getKeyState(KEY_1)==true) {
+        doMark(pcursor, SQ_MEMOA); repeatable=true;
+    }
+    if (getKeyState(KEY_2)==true) {
+        doMark(pcursor, SQ_MEMOB); repeatable=true;
     }
     return repeatable;
 }
@@ -259,7 +251,7 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_x:
             if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true)
             {
-                doCross(pcursor); holdCount=1;
+                doMark(pcursor, SQ_CROSS); holdCount=1;
             }
             break;
         case KEY_space:
@@ -267,7 +259,7 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_m:
             if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true)
             {
-                doMark(pcursor); holdCount=1;
+                doMark(pcursor, SQ_FILL); holdCount=1;
             }
             break;
         case KEY_delete:
@@ -275,7 +267,19 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_d:
             if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true)
             {
-                doDelete(pcursor); holdCount=1;
+                doMark(pcursor, SQ_EMPTY); holdCount=1;
+            }
+            break;
+        case KEY_1:
+            if (getKeyState(KEY_1)==true)
+            {
+                doMark(pcursor, SQ_MEMOA); holdCount=1;
+            }
+            break;
+        case KEY_2:
+            if (getKeyState(KEY_2)==true)
+            {
+                doMark(pcursor, SQ_MEMOB); holdCount=1;
             }
             break;
         case KEY_Z:
@@ -292,28 +296,32 @@ bool doActions(int vkey, XY* pcursor)
             break;
         case KEY_C:
         case KEY_c:
-            // prevent key bounce
-            delay(200); // ms
-            clear_keys();
-
-            if (areYouSure("CLEAR: Are you sure?"))
+            if (getKeyState(KEY_C)==true || getKeyState(KEY_c)==true)
             {
-                XY pos;
-                memset(guess, 0, dims.gs * dims.gs);
-                if (ulist)
-                {
-                    deleteList(ulist);
-                    ulist = NULL;
-                }
+                // prevent key bounce
+                delay(200); // ms
+                clear_keys();
 
-                pcursor->x = 0;
-                pcursor->y = 0;
+                if (areYouSure("CLEAR: Are you sure?"))
+                {
+                    XY pos;
+                    memset(guess, 0, dims.gs * dims.gs);
+                    if (ulist)
+                    {
+                        deleteList(ulist);
+                        ulist = NULL;
+                    }
+
+                    pcursor->x = 0;
+                    pcursor->y = 0;
+                }
+                drawScreen();
+                cursorDraw(pcursor);
             }
-            drawScreen();
-            cursorDraw(pcursor);
             break;
         case KEY_L:
         case KEY_l:
+            if (getKeyState(KEY_L)==true || getKeyState(KEY_l)==true)
             {
                 // prevent key bounce
                 delay(200); // ms
@@ -345,24 +353,27 @@ bool doActions(int vkey, XY* pcursor)
 
         case KEY_Q:
         case KEY_q:
-            // prevent key bounce
-            delay(200); // ms
-            clear_keys();
-
-            if (areYouSure("QUIT: Are you sure?")) {
-                endprog = true;
-                CLS;
-                msgBoxModal(20,11, BRIGHT_RED, BRIGHT_YELLOW);
-                TAB(5,4);printf("GOODBYE!");
-                vdp_reset_viewports();
-                vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
-                TAB(1,36);
+            if (getKeyState(KEY_Q)==true || getKeyState(KEY_q)==true)
+            {
                 // prevent key bounce
                 delay(200); // ms
                 clear_keys();
-            } else {
-                drawScreen();
-                cursorDraw(pcursor);
+
+                if (areYouSure("QUIT: Are you sure?")) {
+                    endprog = true;
+                    CLS;
+                    msgBoxModal(20,11, BRIGHT_RED, BRIGHT_YELLOW);
+                    TAB(5,4);printf("GOODBYE!");
+                    vdp_reset_viewports();
+                    vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+                    TAB(1,36);
+                } else {
+                    drawScreen();
+                    cursorDraw(pcursor);
+                }
+                // prevent key bounce
+                delay(200); // ms
+                clear_keys();
             }
             break;
 
@@ -384,20 +395,28 @@ bool doActions(int vkey, XY* pcursor)
 
         case KEY_backtick:
             // testing only
-            for (int i=0; i<dims.gs*dims.gs; i++) {
-                guess[i] = grid[i];
+            if (getKeyState(KEY_backtick)==true)
+            {
+                for (int i=0; i<dims.gs*dims.gs; i++) {
+                    guess[i] = grid[i];
+                }
+                guess[0] = SQ_EMPTY;
+                refreshBoard(guess);
             }
-            guess[0] = SQ_EMPTY;
-            refreshBoard(guess);
             break;
         case KEY_H:
         case KEY_h:
-            // prevent key bounce
-            delay(300); // ms
-            clear_keys();
+            if (getKeyState(KEY_H)==true || getKeyState(KEY_h)==true)
+            {
+                // prevent key bounce
+                delay(300); // ms
+                clear_keys();
 
-            showHelp(true);
-            cursorDraw(pcursor);
+                showHelp(true);
+                cursorDraw(pcursor);
+                delay(300); // ms
+                clear_keys();
+            }
             break;
     }    
     return endprog;
@@ -810,6 +829,15 @@ void helpLine(int vline, char *keystr, char *descstr)
     for (int i=cola+2; i<colb; i++) { printf("."); }
     TAB(colb, vline); setColours(YELLOW, BLACK); printf("%s", descstr);
 }
+void helpLine2(int vline, char *keystr, char *descstr, char*descstr2)
+{
+    int cola=32; int colb=40;
+    TAB(cola-strlen(keystr), vline); setColours(BRIGHT_YELLOW, BLACK); printf("%s", keystr);
+    setColours(WHITE, BLACK);
+    for (int i=cola+2; i<colb; i++) { printf("."); }
+    TAB(colb, vline); setColours(YELLOW, BLACK); printf("%s", descstr);
+    setColours(WHITE, BLACK); printf("  %s", descstr2);
+}
 
 void showHelp(bool bDrawScreen)
 {
@@ -824,7 +852,7 @@ void showHelp(bool bDrawScreen)
     //centreTextInWidth("NONOGRAMS HELP", 5, boxWidth);
     //centreTextInWidth("==============", 6, boxWidth);
 
-    setColours(WHITE, BLACK);
+    setColours(WHITE, BLACK); // WHITE==light grey
     int vline = 9;
 
     centreTextInWidth("Nonograms are picture logic puzzles", vline++, boxWidth);
@@ -838,11 +866,17 @@ void showHelp(bool bDrawScreen)
     vline+=2;
 
     helpLine(vline, "Arrow keys, Joystick", "Move cursor"); vline+=2;
-    helpLine(vline, "<SPACE>, M", "Fill a square"); vline+=2;
-    helpLine(vline, "<DEL>, D, X", "Clear a square"); vline+=2;
+    helpLine2(vline, "<SPACE>, M", "Fill a square", "Hold to repeat"); vline+=2;
+    helpLine2(vline, "<DEL>, D, X", "Clear a square", "Hold to repeat"); vline+=2;
+    helpLine2(vline, "1 / 2", "Place memo mark", "Hold to repeat"); vline+=2;
+    helpLine(vline, "Z", "Move and count while holding"); vline+=2;
+    setColours(WHITE, BLACK); // WHITE==light grey
+    centreTextInWidth("(Repeat count in top-right)", vline++, boxWidth);
+    vline++;
+    vline++;
     helpLine(vline, "C", "Clear grid"); vline+=2;
     helpLine(vline, "U / R", "Undo / Redo last operation"); vline+=2;
-    helpLine(vline,  "L", "Load new puzzle"); vline+=2;
+    helpLine(vline, "L", "Load new puzzle"); vline+=2;
     helpLine(vline, "Q", "Quit"); vline+=2;
     
     setColours(BRIGHT_YELLOW, BLACK);

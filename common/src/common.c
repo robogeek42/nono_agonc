@@ -69,6 +69,8 @@ void init_config()
     config.col_mark = 0;
     config.col_cross = 8;
     config.col_cursor = 9;
+    config.col_memoa = 14;
+    config.col_memob = 13;
 }
 
 void draw_grid() 
@@ -192,6 +194,35 @@ void redrawGridSquare(uint8_t* grid, XY* pos)
         case SQ_FILL:
             vdp_gcol(0, config.col_mark);
             vdp_plot(PLOT_TYPE_RECT_FILL|PLOT_MODE_FG_REL, dims.sclx-2, dims.scly-2);
+            break;
+        case SQ_MEMOA:
+            // clear
+            vdp_gcol(0, config.col_gridbg);
+            vdp_plot(PLOT_TYPE_RECT_FILL|PLOT_MODE_FG_REL, dims.sclx-2, dims.scly-2);
+
+            // move to sart of cross top-left
+            vdp_move_to(
+                    dims.offx + (pos->x * dims.sclx) + gap,
+                    dims.offy + (pos->y * dims.scly) + gap);
+            vdp_gcol(0, config.col_memoa);
+            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, dims.sclx-gap2, dims.scly-gap2);
+            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, -1, 0);
+            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0-(dims.sclx-gap2), 0-(dims.scly-gap2));
+
+            break;
+        case SQ_MEMOB:
+            // clear
+            vdp_gcol(0, config.col_gridbg);
+            vdp_plot(PLOT_TYPE_RECT_FILL|PLOT_MODE_FG_REL, dims.sclx-2, dims.scly-2);
+
+            // move to sart of cross top-right
+            vdp_move_to(
+                    dims.offx + (pos->x * dims.sclx) + gap + (dims.scly-gap2),
+                    dims.offy + (pos->y * dims.scly) + gap);
+            vdp_gcol(0, config.col_memob);
+            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 0-(dims.sclx-gap2), dims.scly-gap2);
+            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, 1, 0);
+            vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, (dims.sclx-gap2), 0-(dims.scly-gap2));
             break;
     }
     vdp_gcol(0, g==SQ_FILL ? config.col_mark : config.col_gridbg);
