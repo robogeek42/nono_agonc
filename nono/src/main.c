@@ -59,7 +59,7 @@ const char spc30[32] = "                              ";
 int holdCount = 0;
 
 int main(int argc, char **argv) {
-    int vkey;
+    int vkey=0;
 
     /* Initialize keyboard buffer to store 16 events (key up and down) */
     kbuf_init(16);
@@ -83,38 +83,76 @@ int main(int argc, char **argv) {
 
     // Init a struct to hold config info
     init_config();
+   
+    // check if there is a saved game
+    bool bSavedGame = false;
+    bool bSavedGameLoaded = false;
+    int savedGameGS = GS;
+    FILE* fsaveptr = fopen(".saveboard", "rb");
+    if (fsaveptr) {
+        bSavedGame = true;
+        savedGameGS = fgetc(fsaveptr);
+        fclose(fsaveptr);
+    }
+    while (vkey==0)
+    {
+        CLS;
+        title("Nonograms by Robogeek", 14, 11);
+        load_bitmap_file("nono.rgb2", bm_width, bm_height, 0);
+        load_bitmap_file("nono_small.rgb2", bms_width, bms_height, 1);
+        vdp_select_bitmap(0);
+        vdp_draw_bitmap((dims.scrWidthPix-bm_width)/2,120);
     
-    CLS;
-    title("Nonograms by Robogeek", 14, 11);
-    load_bitmap_file("nono.rgb2", bm_width, bm_height, 0);
-    load_bitmap_file("nono_small.rgb2", bms_width, bms_height, 1);
-    vdp_select_bitmap(0);
-    vdp_draw_bitmap((dims.scrWidthPix-bm_width)/2,120);
-    
-    //msgBoxModal(50,28, BRIGHT_CYAN, BRIGHT_YELLOW);
-    setColours(BRIGHT_YELLOW, BLACK);
-    centreText("Welcome to Nonograms!", 7);
-    setColours(WHITE, BLACK);
-    centreText("a picture puzzle game for the Agon", 9);
-    setColours(BRIGHT_YELLOW, BLACK);
-    centreText("Press H for Help, any other key to start", dims.scrHeightChars-3);
+        //msgBoxModal(50,28, BRIGHT_CYAN, BRIGHT_YELLOW);
+        setColours(BRIGHT_YELLOW, BLACK);
+        centreText("Welcome to Nonograms!", 7);
+        setColours(WHITE, BLACK);
+        centreText("a picture puzzle game for the Agon", 9);
+        setColours(BRIGHT_YELLOW, BLACK);
+        centreText("Press H for Help, any other key to start", dims.scrHeightChars-10);
+        if (bSavedGame) {
+            setColours(BRIGHT_WHITE, BLACK);
+            centreText("[R to resume last save]", dims.scrHeightChars-8);
+        }
 
-    vkey = wait_for_any_key_press();
-    CLS;
-    vdp_reset_viewports();
-    vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+        vkey = wait_for_any_key_press();
+        CLS;
+        vdp_reset_viewports();
+        vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
 
-    if (vkey == KEY_H || vkey == KEY_h) {
-        // prevent key bounce
-        delay(300); // ms
-        clear_keys();
-        showHelp(false);
+        if (vkey == KEY_H || vkey == KEY_h) {
+            // prevent key bounce
+            delay(300); // ms
+            clear_keys();
+            showHelp(false);
+            vkey = 0;
+        }
+    }
+    if (bSavedGame) {
+        if (vkey == KEY_R || vkey == KEY_r) {
+            // prevent key bounce
+            delay(300); // ms
+            clear_keys();
+            // resume saved game
+            if (!createGrids(savedGameGS))
+            {
+                setColours(BRIGHT_WHITE, BLACK);
+                printf("\nFailed to create grids\n");
+                wait_for_any_key();
+                return -1;
+            }
+            loadBoard(grid, ".saveboard");
+            loadBoard(guess, ".savestate");
+            
+            drawScreen();
+            bSavedGameLoaded = true;
+        }
     }
 
     // prevent key bounce
     delay(300); // ms
     clear_keys();
-    if (loadDialog() > 0)
+    if (bSavedGameLoaded || loadDialog() > 0)
     {
         delay(300); // ms
         clear_keys();
@@ -370,6 +408,10 @@ bool doActions(int vkey, XY* pcursor)
                 clear_keys();
 
                 if (areYouSure("QUIT: Are you sure?")) {
+                    // save 
+                    saveBoard(grid, ".saveboard");
+                    saveBoard(guess, ".savestate");
+                    
                     endprog = true;
                     CLS;
                     msgBoxModal(20,11, BRIGHT_RED, BRIGHT_YELLOW);
@@ -426,6 +468,18 @@ bool doActions(int vkey, XY* pcursor)
                 cursorDraw(pcursor);
                 delay(300); // ms
                 clear_keys();
+            }
+            break;
+        case KEY_S:
+        case KEY_s:
+            if (getKeyState(KEY_S)==true || getKeyState(KEY_s)==true)
+            {
+                // prevent key bounce
+                delay(300); // ms
+                clear_keys();
+                // save 
+                saveBoard(grid, ".saveboard");
+                saveBoard(guess, ".savestate");
             }
             break;
     }    
@@ -888,6 +942,7 @@ void showHelp(bool bDrawScreen)
     helpLine(vline, "K", "Clear memo marks"); vline+=2;
     helpLine(vline, "U / R", "Undo / Redo last operation"); vline+=2;
     helpLine(vline, "L", "Load new puzzle"); vline+=2;
+    helpLine2(vline, "S", "Save progress","Also saved on Quit"); vline+=2;
     helpLine(vline, "Q", "Quit"); vline+=2;
     
     setColours(BRIGHT_YELLOW, BLACK);
