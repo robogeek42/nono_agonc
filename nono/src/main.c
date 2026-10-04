@@ -51,11 +51,12 @@ void helpLine2(int vline, char *keystr, char *descstr, char*descstr2);
 void showHelp(bool bDrawScreen);
 void drawNono(int x, int y, int w, int h);
 void openingAnimation();
+void debugPrep(int X, int Y, int W, int H, int COL);
+void clearMemoMarks();
 
 const char spc30[32] = "                              ";
 
 int holdCount = 0;
-void debugPrep(int X, int Y, int W, int H, int COL);
 
 int main(int argc, char **argv) {
     int vkey;
@@ -156,36 +157,36 @@ int main(int argc, char **argv) {
     return 0; 
 }
 
-void doMark(XY* pcursor, uint8_t type)
+void doMark(XY* pcursor, uint8_t type, bool noCursorChange)
 {
-    cursorClear(pcursor);
+    if (!noCursorChange) cursorClear(pcursor);
     addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), type);
     set_grid(guess, pcursor, type);
     redrawGridSquare(guess, pcursor);
     if (type==SQ_FILL || type==SQ_CROSS) checkWin();
-    cursorDraw(pcursor);
+    if (!noCursorChange) cursorDraw(pcursor);
 }
 
 bool checkRepeatableActions(XY* pcursor)
 {
     bool repeatable = false;
     if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true) {
-        doMark(pcursor, SQ_CROSS); repeatable=true;
+        doMark(pcursor, SQ_CROSS, false); repeatable=true;
     }
     if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true) {
-        doMark(pcursor, SQ_FILL); repeatable=true;
+        doMark(pcursor, SQ_FILL, false); repeatable=true;
     }
     if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true) {
-        doMark(pcursor, SQ_EMPTY); repeatable=true;
+        doMark(pcursor, SQ_EMPTY, false); repeatable=true;
     }
     if (getKeyState(KEY_Z)==true || getKeyState(KEY_z)==true) {
         repeatable=true;
     }
     if (getKeyState(KEY_1)==true) {
-        doMark(pcursor, SQ_MEMOA); repeatable=true;
+        doMark(pcursor, SQ_MEMOA, false); repeatable=true;
     }
     if (getKeyState(KEY_2)==true) {
-        doMark(pcursor, SQ_MEMOB); repeatable=true;
+        doMark(pcursor, SQ_MEMOB, false); repeatable=true;
     }
     return repeatable;
 }
@@ -251,7 +252,7 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_x:
             if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true)
             {
-                doMark(pcursor, SQ_CROSS); holdCount=1;
+                doMark(pcursor, SQ_CROSS, false); holdCount=1;
             }
             break;
         case KEY_space:
@@ -259,7 +260,7 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_m:
             if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true)
             {
-                doMark(pcursor, SQ_FILL); holdCount=1;
+                doMark(pcursor, SQ_FILL, false); holdCount=1;
             }
             break;
         case KEY_delete:
@@ -267,19 +268,28 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_d:
             if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true)
             {
-                doMark(pcursor, SQ_EMPTY); holdCount=1;
+                doMark(pcursor, SQ_EMPTY, false); holdCount=1;
             }
             break;
         case KEY_1:
             if (getKeyState(KEY_1)==true)
             {
-                doMark(pcursor, SQ_MEMOA); holdCount=1;
+                doMark(pcursor, SQ_MEMOA, false); holdCount=1;
             }
             break;
         case KEY_2:
             if (getKeyState(KEY_2)==true)
             {
-                doMark(pcursor, SQ_MEMOB); holdCount=1;
+                doMark(pcursor, SQ_MEMOB, false); holdCount=1;
+            }
+            break;
+        case KEY_K:
+        case KEY_k:
+            if (getKeyState(KEY_K)==true || getKeyState(KEY_k)==true)
+            {
+                cursorClear(pcursor);
+                clearMemoMarks();
+                cursorDraw(pcursor);
             }
             break;
         case KEY_Z:
@@ -836,7 +846,7 @@ void helpLine2(int vline, char *keystr, char *descstr, char*descstr2)
     setColours(WHITE, BLACK);
     for (int i=cola+2; i<colb; i++) { printf("."); }
     TAB(colb, vline); setColours(YELLOW, BLACK); printf("%s", descstr);
-    setColours(WHITE, BLACK); printf("  %s", descstr2);
+    setColours(WHITE, BLACK); printf(" %s", descstr2);
 }
 
 void showHelp(bool bDrawScreen)
@@ -866,15 +876,16 @@ void showHelp(bool bDrawScreen)
     vline+=2;
 
     helpLine(vline, "Arrow keys, Joystick", "Move cursor"); vline+=2;
-    helpLine2(vline, "<SPACE>, M", "Fill a square", "Hold to repeat"); vline+=2;
-    helpLine2(vline, "<DEL>, D, X", "Clear a square", "Hold to repeat"); vline+=2;
-    helpLine2(vline, "1 / 2", "Place memo mark", "Hold to repeat"); vline+=2;
+    helpLine2(vline, "<SPACE>, M",  "Fill a square", "Hold+Move to repeat"); vline+=2;
+    helpLine2(vline, "<DEL>, D, X", "Clear a square", "Hold+Move to repeat"); vline+=2;
+    helpLine2(vline, "1 / 2",       "Place memo mark", "Hold+move to repeat"); vline+=2;
     helpLine(vline, "Z", "Move and count while holding"); vline+=2;
     setColours(WHITE, BLACK); // WHITE==light grey
     centreTextInWidth("(Repeat count in top-right)", vline++, boxWidth);
     vline++;
     vline++;
     helpLine(vline, "C", "Clear grid"); vline+=2;
+    helpLine(vline, "K", "Clear memo marks"); vline+=2;
     helpLine(vline, "U / R", "Undo / Redo last operation"); vline+=2;
     helpLine(vline, "L", "Load new puzzle"); vline+=2;
     helpLine(vline, "Q", "Quit"); vline+=2;
@@ -926,4 +937,20 @@ void debugPrep(int X, int Y, int W, int H, int COL)
     vdp_gcol(0,0); vdp_filled_rectangle(X*8,Y*8,(X+W)*8,(Y+H)*8);
     vdp_gcol(0,COL); vdp_set_text_colour(COL);
     TAB(X,Y);
+}
+
+void clearMemoMarks()
+{
+    XY it;
+    // Find all memo marks, delete adding to undo as we go
+    for(it.y=0;it.y<dims.gs;it.y++)
+    {
+        for(it.x=0;it.x<dims.gs;it.x++)
+        {
+            if (get_grid(guess, &it) == SQ_MEMOA || get_grid(guess, &it) == SQ_MEMOB)
+            {
+                doMark(&it, SQ_EMPTY, true);
+            }
+        }
+    }
 }
