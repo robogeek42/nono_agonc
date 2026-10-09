@@ -178,5 +178,6 @@ void clearKeyStates();
 uint8_t doKeyPoll();
 uint8_t wait_for_keypoll();
 uint8_t getKeyState(uint8_t vkey);
+void clearKeyBuffer(int delayms);
 
 #endif

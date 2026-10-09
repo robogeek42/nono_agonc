@@ -87,3 +87,11 @@ uint8_t getKeyState(uint8_t vkey)
 {
     return keystates[vkey];
 }
+
+// Clear the key buffer to prevent bounce
+// delay up to delayms ms before clearing
+void clearKeyBuffer(int delayms)
+{
+    delay(delayms);
+    clear_keys();
+}

@@ -121,18 +121,14 @@ int main(int argc, char **argv) {
         vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
 
         if (vkey == KEY_H || vkey == KEY_h) {
-            // prevent key bounce
-            delay(300); // ms
-            clear_keys();
+            clearKeyBuffer(300);
             showHelp(false);
             vkey = 0;
         }
     }
     if (bSavedGame) {
         if (vkey == KEY_R || vkey == KEY_r) {
-            // prevent key bounce
-            delay(300); // ms
-            clear_keys();
+            clearKeyBuffer(300);
             // resume saved game
             if (!createGrids(savedGameGS))
             {
@@ -149,13 +145,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    // prevent key bounce
-    delay(300); // ms
-    clear_keys();
+    clearKeyBuffer(300);
     if (bSavedGameLoaded || loadDialog() > 0)
     {
-        delay(300); // ms
-        clear_keys();
+        clearKeyBuffer(300);
 
         cursor.x = 0;
         cursor.y = 0;
@@ -195,6 +188,7 @@ int main(int argc, char **argv) {
     return 0; 
 }
 
+// Change a square
 void doMark(XY* pcursor, uint8_t type, bool noCursorChange)
 {
     if (!noCursorChange) cursorClear(pcursor);
@@ -205,6 +199,7 @@ void doMark(XY* pcursor, uint8_t type, bool noCursorChange)
     if (!noCursorChange) cursorDraw(pcursor);
 }
 
+// check if any of the repeatable action keys are still pressed
 bool checkRepeatableActions(XY* pcursor)
 {
     bool repeatable = false;
@@ -229,6 +224,7 @@ bool checkRepeatableActions(XY* pcursor)
     return repeatable;
 }
 
+// For each type of key execute action
 bool doActions(int vkey, XY* pcursor)
 {
     bool endprog = false;
@@ -346,9 +342,7 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_c:
             if (getKeyState(KEY_C)==true || getKeyState(KEY_c)==true)
             {
-                // prevent key bounce
-                delay(200); // ms
-                clear_keys();
+                clearKeyBuffer(200);
 
                 if (areYouSure("CLEAR: Are you sure?"))
                 {
@@ -371,9 +365,7 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_l:
             if (getKeyState(KEY_L)==true || getKeyState(KEY_l)==true)
             {
-                // prevent key bounce
-                delay(200); // ms
-                clear_keys();
+                clearKeyBuffer(200);
 
                 // Call load dialog
                 int ret = loadDialog();
@@ -393,9 +385,7 @@ bool doActions(int vkey, XY* pcursor)
                 pcursor->x = 0;
                 pcursor->y = 0;
                 cursorDraw(pcursor);
-                // prevent key bounce
-                delay(200); // ms
-                clear_keys();
+                clearKeyBuffer(200);
             }
             break;
 
@@ -403,9 +393,7 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_q:
             if (getKeyState(KEY_Q)==true || getKeyState(KEY_q)==true)
             {
-                // prevent key bounce
-                delay(200); // ms
-                clear_keys();
+                clearKeyBuffer(200);
 
                 if (areYouSure("QUIT: Are you sure?")) {
                     // save 
@@ -423,9 +411,7 @@ bool doActions(int vkey, XY* pcursor)
                     drawScreen();
                     cursorDraw(pcursor);
                 }
-                // prevent key bounce
-                delay(200); // ms
-                clear_keys();
+                clearKeyBuffer(200);
             }
             break;
 
@@ -460,23 +446,19 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_h:
             if (getKeyState(KEY_H)==true || getKeyState(KEY_h)==true)
             {
-                // prevent key bounce
-                delay(300); // ms
-                clear_keys();
+                clearKeyBuffer(300);
 
                 showHelp(true);
                 cursorDraw(pcursor);
-                delay(300); // ms
-                clear_keys();
+                clearKeyBuffer(300);
             }
             break;
         case KEY_S:
         case KEY_s:
             if (getKeyState(KEY_S)==true || getKeyState(KEY_s)==true)
             {
-                // prevent key bounce
-                delay(300); // ms
-                clear_keys();
+                clearKeyBuffer(300);
+
                 // save 
                 saveBoard(grid, ".saveboard");
                 saveBoard(guess, ".savestate");
@@ -538,9 +520,7 @@ int loadDialog()
             fgets(&str[0], 64, stdin);
             processString(str, str2);
             if (str2[0]=='h' || str2[0]=='H') {
-                // prevent key bounce
-                delay(300); // ms
-                clear_keys();
+                clearKeyBuffer(300);
                 showHelp(false);
             } else if (str2[0]=='q' || str2[0]=='Q') {
                 CLS;
@@ -659,11 +639,14 @@ void checkWin()
 {
     if (isGridComplete(guess)) {
         if (checkSolution(guess, grid) == true) {
-            msgBoxModal(20,11, BRIGHT_GREEN, BRIGHT_YELLOW);
-            TAB(4,5);printf("You did it!!");
+            msgBoxModal(30,21, BRIGHT_GREEN, BRIGHT_YELLOW);
+            TAB(9,10);printf("You did it!!");
+            clearKeyBuffer(300);
+
             wait_for_any_key();
             vdp_reset_viewports();
             vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+            clearKeyStates();
             drawScreen();
         }
     }
