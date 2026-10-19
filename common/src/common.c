@@ -225,12 +225,13 @@ void redrawGridSquare(uint8_t* grid, XY* pos)
             vdp_plot(PLOT_TYPE_SOLID_ALL|PLOT_MODE_FG_REL, (dims.sclx-gap2), 0-(dims.scly-gap2));
             break;
     }
+    // Mini map
     vdp_gcol(0, g==SQ_FILL ? config.col_mark : config.col_gridbg);
     vdp_filled_rectangle(
             dims.moffx + pos->x * dims.mscl,
             dims.moffy + pos->y * dims.mscl, 
-            dims.moffx + pos->x * dims.mscl + dims.mscl,
-            dims.moffy + pos->y * dims.mscl + dims.mscl);
+            dims.moffx + pos->x * dims.mscl + dims.mscl - 1,
+            dims.moffy + pos->y * dims.mscl + dims.mscl - 1);
 }
 
 // Access functions to grid arrays
@@ -528,19 +529,22 @@ void refreshCounts(uint8_t* grid)
 
 void viewMini(uint8_t* grid) 
 {
+    // Border
+    vdp_set_graphics_colour(0, config.col_memoa);
+    vdp_rectangle(
+            dims.moffx-1,
+            dims.moffy-1,
+            dims.moffx + dims.mscl * dims.gs + 1,
+            dims.moffy + dims.mscl * dims.gs + 1);
+    // Clear to BG colour
     vdp_set_graphics_colour(0, config.col_gridbg);
     vdp_filled_rectangle(
             dims.moffx,
             dims.moffy,
             dims.moffx + dims.mscl * dims.gs,
             dims.moffy + dims.mscl * dims.gs);
-    vdp_set_graphics_colour(0, 14);
-    vdp_rectangle(
-            dims.moffx-1,
-            dims.moffy-1,
-            dims.moffx + dims.mscl * dims.gs + 1,
-            dims.moffy + dims.mscl * dims.gs + 1);
 
+    // Draw all filled squares
     vdp_set_graphics_colour(0, config.col_mark);
     XY pos;
     for (pos.y=0;pos.y<dims.gs;pos.y++) {
@@ -549,8 +553,8 @@ void viewMini(uint8_t* grid)
                 vdp_filled_rectangle(
                         dims.moffx + pos.x * dims.mscl,
                         dims.moffy + pos.y * dims.mscl, 
-                        dims.moffx + pos.x * dims.mscl + dims.mscl,
-                        dims.moffy + pos.y * dims.mscl + dims.mscl);
+                        dims.moffx + pos.x * dims.mscl + dims.mscl - 1,
+                        dims.moffy + pos.y * dims.mscl + dims.mscl - 1);
             }
         }
     }
@@ -710,11 +714,61 @@ int load_bitmap_file( const char *fname, int width, int height, int bmap_id )
 
 	vdp_select_bitmap(bmap_id);
 	vdp_adv_bitmap_from_buffer(width, height, 1); // RGBA2
-	printf("\n");
+	//printf("\n");
 	
 	fclose( fp );
 	free( buffer );
 
 	return 0;
+}
+
+int load_nono_as_rgb2( const char *fname, int bmap_id )
+{
+	FILE *fp;
+	char *buffer;
+	int bytes_remain = 0;
+
+	if ( !(buffer = (char *)malloc( CHUNK_SIZE ) ) ) {
+		printf( "Failed to allocate %d bytes for buffer.\n",CHUNK_SIZE );
+		return -1;
+	}
+
+	if ( !(fp = fopen( fname, "rb" ) ) ) {
+		printf( "Error opening file \"%s\". Quitting.\n", fname );
+		return -1;
+	}
+
+    uint8_t GS=0;
+    if ( fread( &GS, 1, 1, fp ) != 1 ) {
+        printf("Error reading file");
+        return 0;
+    }
+    //printf("Size %d\n",GS);
+	bytes_remain = GS * GS;
+
+	vdp_adv_clear_buffer(0xFA00+bmap_id);
+
+	while (bytes_remain > 0)
+	{
+		int size = (bytes_remain>CHUNK_SIZE)?CHUNK_SIZE:bytes_remain;
+
+		vdp_adv_write_block(0xFA00+bmap_id, size);
+
+		if ( fread( buffer, 1, size, fp ) != (size_t)size ) return 0;
+		mos_puts( buffer, size, 0 );
+		//printf(".");
+
+		bytes_remain -= size;
+	}
+	vdp_adv_consolidate(0xFA00+bmap_id);
+
+	vdp_select_bitmap(bmap_id);
+	vdp_adv_bitmap_from_buffer(GS, GS, 1); // RGBA2
+	//printf("\n");
+	
+	fclose( fp );
+	free( buffer );
+
+	return GS;
 }
 

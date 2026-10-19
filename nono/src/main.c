@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
             if (holdCount > 0) {
                 printf("%02d",holdCount);
             }
-        } while (vkey != KEY_escape && !exit);
+        } while (!exit);
 
     }
     /* =========================================================
