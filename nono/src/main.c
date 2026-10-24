@@ -16,6 +16,7 @@ typedef struct {
     char fname[12];
     char title[20];
     char clue[30];
+    int state;
 } PUZZINFO; 
 
 const uint8_t screen_mode = 0;
@@ -23,6 +24,9 @@ const uint8_t screen_mode = 0;
 uint8_t* grid;
 uint8_t* guess;
 PUZZINFO* puzzinfo;
+#define PUZ_NEW 0
+#define PUZ_DONE 1
+#define PUZ_INPROG 2
 
 CONFIG config;
 DIMS dims;
@@ -34,9 +38,11 @@ int bm_width = 280; int bm_height = 56;
 int bms_width = 210; int bms_height = 42;
 
 bool doActions(int vkey, XY* pcursor);
+void sayGoodbye();
 void drawScreen();
-int loadDialog();
+int loadDialogGUI(int cid);
 int loadFileInfo(char* puzzles_fname);
+int loadUserInfo(char* userinfo_fname);
 bool createGrids(int GS);
 void redraw_screen(uint8_t* g);
 void checkWin();
@@ -55,9 +61,12 @@ void debugPrep(int X, int Y, int W, int H, int COL);
 void clearMemoMarks();
 
 const char spc30[32] = "                              ";
+char sbuff[80];
 
 int holdCount = 0;
 
+int current_puzzid = 0;
+   
 int main(int argc, char **argv) {
     int vkey=0;
 
@@ -83,16 +92,22 @@ int main(int argc, char **argv) {
 
     // Init a struct to hold config info
     init_config();
-   
+
     // check if there is a saved game
     bool bSavedGame = false;
     bool bSavedGameLoaded = false;
     int savedGameGS = GS;
+    int savedGameID = 0;
     FILE* fsaveptr = fopen(".saveboard", "rb");
     if (fsaveptr) {
         bSavedGame = true;
         savedGameGS = fgetc(fsaveptr);
         fclose(fsaveptr);
+        FILE* fsaveid = fopen(".saveid","rb");
+        if (fsaveid) {
+            savedGameID = fgetc(fsaveid); // max 255
+            fclose(fsaveid);
+        }
     }
     while (vkey==0)
     {
@@ -112,7 +127,8 @@ int main(int argc, char **argv) {
         centreText("Press H for Help, any other key to start", dims.scrHeightChars-10);
         if (bSavedGame) {
             setColours(BRIGHT_WHITE, BLACK);
-            centreText("[R to resume last save]", dims.scrHeightChars-8);
+            sprintf(sbuff, "[R to resume last save ID=%d]",savedGameID);
+            centreText(sbuff, dims.scrHeightChars-8);
         }
 
         vkey = wait_for_any_key_press();
@@ -142,11 +158,27 @@ int main(int argc, char **argv) {
             
             drawScreen();
             bSavedGameLoaded = true;
+            current_puzzid = savedGameID;
         }
     }
 
     clearKeyBuffer(300);
-    if (bSavedGameLoaded || loadDialog() > 0)
+    if (!bSavedGameLoaded)
+    {
+        current_puzzid = loadDialogGUI(current_puzzid);
+        if (current_puzzid == 0)
+        {
+            // 0 == user quit from the load GUI
+            sayGoodbye();
+            goto prog_exit;
+        } else if (current_puzzid < 0) {
+            // -1 == error. Exit.
+            printf("Error\n");
+            goto prog_exit;
+        }
+    }
+
+    if (bSavedGameLoaded || current_puzzid > 0)
     {
         clearKeyBuffer(300);
 
@@ -172,6 +204,7 @@ int main(int argc, char **argv) {
         } while (!exit);
 
     }
+prog_exit:
     /* =========================================================
      * DeInit
      */
@@ -368,12 +401,14 @@ bool doActions(int vkey, XY* pcursor)
                 clearKeyBuffer(200);
 
                 // Call load dialog
-                int ret = loadDialog();
-                if (ret < 0) {
+                CLS;
+                title("Nonograms by Robogeek", 14, 11);
+                current_puzzid = loadDialogGUI(current_puzzid);
+                if (current_puzzid < 0) {
                     printf("Error!\nGOODBYE!\n");
                     return true; // end
-                } else if (ret == 0) {
-                    printf("GOODBYE!\n");
+                } else if (current_puzzid == 0) {
+                    sayGoodbye();
                     return true; // end
                 }
                 if (ulist)
@@ -399,14 +434,16 @@ bool doActions(int vkey, XY* pcursor)
                     // save 
                     saveBoard(grid, ".saveboard");
                     saveBoard(guess, ".savestate");
+                    // write ID
+                    FILE *fid = fopen(".saveid", "wb");
+                    if (fid)
+                    {
+                        fputc(current_puzzid, fid);
+                        fclose(fid);
+                    }
                     
                     endprog = true;
-                    CLS;
-                    msgBoxModal(20,11, BRIGHT_RED, BRIGHT_YELLOW);
-                    TAB(5,4);printf("GOODBYE!");
-                    vdp_reset_viewports();
-                    vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
-                    TAB(1,36);
+                    sayGoodbye();
                 } else {
                     drawScreen();
                     cursorDraw(pcursor);
@@ -468,6 +505,16 @@ bool doActions(int vkey, XY* pcursor)
     return endprog;
 }
 
+void sayGoodbye()
+{
+    CLS;
+    msgBoxModal(20,11, BRIGHT_RED, BRIGHT_YELLOW);
+    TAB(5,4);printf("GOODBYE!");
+    vdp_reset_viewports();
+    vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+    TAB(1,36);
+}
+
 void drawScreen() 
 {
     CLS;
@@ -480,70 +527,188 @@ void drawScreen()
     viewMini(guess);
 }
 
-int loadDialog()
+
+int loadDialogGUI(int cid)
 {
+    int selid=0;
     int num_puzz = loadFileInfo("data/puzzles.txt");
+    loadUserInfo("data/user.txt");
     if (num_puzz > 0)
     {
-        int sel = 0;
-        while (sel == 0)
+        int picgrid_size = 64;
+        int picgrid_w = (int)((dims.scrWidthPix - 16) / picgrid_size);
+        int picgrid_h = (int)((dims.scrHeightPix - 32) / picgrid_size);
+        int pic_row = 0, pic_col = 0;
+
+
+        // Display a grid of puzzles
+        int qbuffid = 2;
+        int qbsize = 40;
+        int buffid = 3;
+        load_bitmap_file("data/q2.rgb2", qbsize, qbsize, qbuffid);
+        char rgb2fname[20] = "data/";
+        int C1,C2,MS;
+        for (int idx=0; idx<num_puzz; idx++)
         {
-            CLS;
-            title("LOAD DIALOG", 6, 11);
-            setColours(BRIGHT_WHITE, BLACK);
-
-            setColours(BRIGHT_YELLOW, BLACK);
-            TAB(1,2);
-            printf("Select a puzzle (1 - %d)", num_puzz);
-            setColours(BRIGHT_WHITE, BLACK);
-            int line = 4; int col = 2;
-            for (int i=0; i<num_puzz; i++)
+            int x = 8 + (pic_col*picgrid_size);
+            int y = 16 + (pic_row*picgrid_size);
+            switch(puzzinfo[idx].gs)
             {
-                TAB(col, line);
-                printf("%d: %s (%dx%d)", i+1, puzzinfo[i].title, puzzinfo[i].gs, puzzinfo[i].gs);
-                line++;
-                if (line > 20) {
-                    line = 3; col += 36;
-                }
+                case 10:
+                    C1 = BLUE;
+                    C2 = WHITE;
+                    MS = 40;
+                    break;
+                case 15:
+                    C1 = GREEN;
+                    C2 = BRIGHT_WHITE;
+                    MS = 30;
+                    break;
+                case 20:
+                    C1 = CYAN;
+                    C2 = BLACK;
+                    MS = 40;
+                    break;
+                case 25:
+                    C1 = MAGENTA;
+                    C2 = BLACK;
+                    MS = 25;
+                    break;
             }
-        
+            // coulour coded background
+            setColours(C1, BLACK);
+            vdp_filled_rectangle(x+4,y+12,x+picgrid_size-4,y+picgrid_size-4);
+
+            // number above
             setColours(BRIGHT_YELLOW, BLACK);
-            centreTextInWidth("Enter File Number, H for Help or Q to quit",dims.scrHeightChars - 2, dims.scrWidthChars);
-            setColours(BRIGHT_WHITE, BLACK);
+            vdp_write_at_graphics_cursor();
+            vdp_move_to(x+12, y+4); printf("#%03d",puzzinfo[idx].id);
 
-            char str[64];
-            char str2[64];
-            char *scanptr;
-
-            TAB(1,24);
-            printf("Enter file number:");
-            fgets(&str[0], 64, stdin);
-            processString(str, str2);
-            if (str2[0]=='h' || str2[0]=='H') {
-                clearKeyBuffer(300);
-                showHelp(false);
-            } else if (str2[0]=='q' || str2[0]=='Q') {
-                CLS;
-                msgBoxModal(20,11, BRIGHT_RED, BRIGHT_YELLOW);
-                TAB(5,4);printf("GOODBYE!");
-                vdp_reset_viewports();
-                vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
-                TAB(1,36);
-                return 0;
+            if (puzzinfo[idx].state == PUZ_DONE)
+            {
+                strcpy(&rgb2fname[5], puzzinfo[idx].fname);
+                rgb2fname[5+7]='r';
+                rgb2fname[5+8]='g';
+                rgb2fname[5+9]='b';
+                rgb2fname[5+10]='2';
+                rgb2fname[5+11]=0;
+                setColours(BLACK, BLACK);
+                vdp_filled_rectangle(x+(picgrid_size-MS)/2,y+8+(picgrid_size-MS)/2,
+                        x+(picgrid_size-MS)/2+MS-1,y+8+(picgrid_size-MS)/2+MS-1);
+                load_bitmap_file(rgb2fname,MS, MS, buffid);
+                vdp_move_to(0,0);
+                setColours(WHITE, BLACK);
+                //printf("FILE: %s\n",rgb2fname);
+                vdp_select_bitmap(buffid);
+                vdp_draw_bitmap(x+(picgrid_size-MS)/2, y+8+(picgrid_size-MS)/2);
             } else {
-                sel = strtol(str2, &scanptr, 0);
+                // Q? bitmap    
+                vdp_select_bitmap(qbuffid);
+                vdp_draw_bitmap(x+(picgrid_size-qbsize)/2, y+8+(picgrid_size-qbsize)/2);
+            }
+
+            // Size
+            setColours(C2, BLACK);
+            vdp_write_at_graphics_cursor();
+            vdp_move_to(x+4, y+12); printf("%dx%d",puzzinfo[idx].gs, puzzinfo[idx].gs);
+            
+            // Next grid square
+            pic_col++;
+            if (pic_col==picgrid_w) {
+                pic_row++;
+                pic_col = 0;
             }
         }
 
-        sel--;
+        // Interactive GUI - arrow-keys and Enter
+        int offx,offy;
+        int selx=0, sely=0;
+        if (cid>0) {
+            selid = cid-1;
+            selx = selid % picgrid_w;
+            sely = (int) (selid / picgrid_w);
+        }
+        
+        bool selected = false;
+        int vkey;
+        clearKeyBuffer(300);
+        while (!selected)
+        {
+            offx = 8 + (selx*picgrid_size);
+            offy = 16 + (sely*picgrid_size);
+            setColours(BRIGHT_RED,BLACK);
+            vdp_rectangle(offx,offy,offx+picgrid_size-1,offy+picgrid_size-1);
+            vdp_rectangle(offx+1,offy+1,offx+picgrid_size-2,offy+picgrid_size-2);
 
-        if (strlen(puzzinfo[sel].fname)>0)
+            vkey = wait_for_keypoll();
+
+            setColours(BLACK,BLACK);
+            vdp_rectangle(offx,offy,offx+picgrid_size-1,offy+picgrid_size-1);
+            vdp_rectangle(offx+1,offy+1,offx+picgrid_size-2,offy+picgrid_size-2);
+
+            switch (vkey) {
+                case KEY_DOWN:
+                    if (selid+picgrid_w < num_puzz)
+                    {
+                        selid+=picgrid_w;
+                        sely+=1;
+                    }
+                    break;
+                case KEY_UP:
+                    if (selid-picgrid_w >= 0)
+                    {
+                        selid-=picgrid_w;
+                        sely-=1;
+                    }
+                    break;
+                case KEY_LEFT:
+                    if (selid > 0)
+                    {
+                        selid-=1;
+                        selx-=1;
+                        if (selx<0)
+                        {
+                            selx=picgrid_w-1;
+                            sely-=1;
+                        }
+                    }
+                    break;
+                case KEY_RIGHT:
+                    if (selid < (num_puzz-1))
+                    {
+                        selid++;
+                        selx+=1;
+                        if (selx >= picgrid_w)
+                        {
+                            selx=0;
+                            sely++;
+                        }
+                    }
+                    break;
+                case KEY_enter:
+                    selected=true;
+                    break;
+                case KEY_Q:
+                case KEY_q:
+                    selected=true;
+                    selid=-1;
+                    break;
+            }
+            clearKeyBuffer(300);
+        }
+        if (selid < 0)
+        {
+            // exit load
+            return 0;   // this is a puzzle-id (starts at 1, not the index into the array)
+        }
+            
+        if (strlen(puzzinfo[selid].fname)>0)
         {
             char filename[30];
             strcpy(filename, "data/");
-            strcpy(&(filename[5]), puzzinfo[sel].fname);
+            strcpy(&(filename[5]), puzzinfo[selid].fname);
 
-            if (!createGrids(puzzinfo[sel].gs))
+            if (!createGrids(puzzinfo[selid].gs))
             {
                 printf("\nFailed to create grids\n");
                 wait_for_any_key();
@@ -563,24 +728,22 @@ int loadDialog()
             wait_for_any_key();
             return -1;
         }
-    } else {
-        printf("Failed to load fileinfo\n");;
-        wait_for_any_key();
-        return -1;
+
     }
-    return num_puzz;
+    clearKeyBuffer(300);
+    return puzzinfo[selid].id;
 }
 
 // Load up the puzzle info file
 int loadFileInfo(char* puzzles_fname)
 {
-    int num_puzz;
+    int num_puzz=0;
     char buff[80]; char* token;
     FILE* fptr = fopen(puzzles_fname, "r");
     if (!fptr) {
-        TAB(1,3);printf("can't open %s", puzzles_fname);
+        TAB(1,0);printf("can't open %s", puzzles_fname);
     } else {
-        CLS;
+        //CLS;
         if (!fgets(buff,80,fptr)) return -1;
         num_puzz = atoi(buff);
 
@@ -611,6 +774,25 @@ int loadFileInfo(char* puzzles_fname)
         }
     }
     return num_puzz;
+}
+
+int loadUserInfo(char* userinfo_fname)
+{
+    char buff[250]; char* token = NULL;
+    FILE* fptr = fopen(userinfo_fname, "r");
+    if (!fptr) {
+        //TAB(1,0);printf("can't open %s", userinfo_fname);
+    } else {
+        if (!fgets(buff,250,fptr)) return -1;
+        token = strtok(buff, ",");
+        while (token)
+        {
+            int id = atoi(token);
+            puzzinfo[id].state = PUZ_DONE;
+            token = strtok(NULL, ",");
+        };
+    }
+    return 0;
 }
 
 
