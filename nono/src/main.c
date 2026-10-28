@@ -24,9 +24,11 @@ const uint8_t screen_mode = 0;
 uint8_t* grid;
 uint8_t* guess;
 PUZZINFO* puzzinfo;
+// puzzinfo.state 
 #define PUZ_NEW 0
 #define PUZ_DONE 1
 #define PUZ_INPROG 2
+int num_puzz=0;
 
 CONFIG config;
 DIMS dims;
@@ -43,6 +45,7 @@ void drawScreen();
 int loadDialogGUI(int cid);
 int loadFileInfo(char* puzzles_fname);
 int loadUserInfo(char* userinfo_fname);
+int writeUserInfo(char *userinfo_fname);
 bool createGrids(int GS);
 void redraw_screen(uint8_t* g);
 void checkWin();
@@ -93,89 +96,97 @@ int main(int argc, char **argv) {
     // Init a struct to hold config info
     init_config();
 
+    // Load the puzzle data and user completed game info
+    num_puzz = loadFileInfo("data/puzzles.txt");
+    loadUserInfo("user/user.txt");
+
     // check if there is a saved game
     bool bSavedGame = false;
     bool bSavedGameLoaded = false;
-    int savedGameGS = GS;
     int savedGameID = 0;
-    FILE* fsaveptr = fopen(".saveboard", "rb");
-    if (fsaveptr) {
+    FILE* fsaveid = fopen(".resumeid","rb");
+    if (fsaveid) {
+        savedGameID = fgetc(fsaveid); // max 255
+        fclose(fsaveid);
         bSavedGame = true;
-        savedGameGS = fgetc(fsaveptr);
-        fclose(fsaveptr);
-        FILE* fsaveid = fopen(".saveid","rb");
-        if (fsaveid) {
-            savedGameID = fgetc(fsaveid); // max 255
-            fclose(fsaveid);
-        }
     }
-    while (vkey==0)
+
+    bool bExit = false;
+    while (!bSavedGameLoaded && current_puzzid==0 && !bExit) 
     {
-        CLS;
-        title("Nonograms by Robogeek", 14, 11);
-        load_bitmap_file("nono.rgb2", bm_width, bm_height, 0);
-        load_bitmap_file("nono_small.rgb2", bms_width, bms_height, 1);
-        vdp_select_bitmap(0);
-        vdp_draw_bitmap((dims.scrWidthPix-bm_width)/2,120);
-    
-        //msgBoxModal(50,28, BRIGHT_CYAN, BRIGHT_YELLOW);
-        setColours(BRIGHT_YELLOW, BLACK);
-        centreText("Welcome to Nonograms!", 7);
-        setColours(WHITE, BLACK);
-        centreText("a picture puzzle game for the Agon", 9);
-        setColours(BRIGHT_YELLOW, BLACK);
-        centreText("Press H for Help, any other key to start", dims.scrHeightChars-10);
-        if (bSavedGame) {
-            setColours(BRIGHT_WHITE, BLACK);
-            sprintf(sbuff, "[R to resume last save ID=%d]",savedGameID);
-            centreText(sbuff, dims.scrHeightChars-8);
-        }
-
-        vkey = wait_for_any_key_press();
-        CLS;
-        vdp_reset_viewports();
-        vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
-
-        if (vkey == KEY_H || vkey == KEY_h) {
-            clearKeyBuffer(300);
-            showHelp(false);
-            vkey = 0;
-        }
-    }
-    if (bSavedGame) {
-        if (vkey == KEY_R || vkey == KEY_r) {
-            clearKeyBuffer(300);
-            // resume saved game
-            if (!createGrids(savedGameGS))
-            {
-                setColours(BRIGHT_WHITE, BLACK);
-                printf("\nFailed to create grids\n");
-                wait_for_any_key();
-                return -1;
-            }
-            loadBoard(grid, ".saveboard");
-            loadBoard(guess, ".savestate");
-            
-            drawScreen();
-            bSavedGameLoaded = true;
-            current_puzzid = savedGameID;
-        }
-    }
-
-    clearKeyBuffer(300);
-    if (!bSavedGameLoaded)
-    {
-        current_puzzid = loadDialogGUI(current_puzzid);
-        if (current_puzzid == 0)
+        while (vkey==0)
         {
-            // 0 == user quit from the load GUI
-            sayGoodbye();
-            goto prog_exit;
-        } else if (current_puzzid < 0) {
-            // -1 == error. Exit.
-            printf("Error\n");
-            goto prog_exit;
+            clearKeyBuffer(300);
+            CLS;
+            title("Nonograms by Robogeek", 14, 11);
+            load_bitmap_file("nono.rgb2", bm_width, bm_height, 0);
+            load_bitmap_file("nono_small.rgb2", bms_width, bms_height, 1);
+            vdp_select_bitmap(0);
+            vdp_draw_bitmap((dims.scrWidthPix-bm_width)/2,120);
+        
+            //msgBoxModal(50,28, BRIGHT_CYAN, BRIGHT_YELLOW);
+            setColours(BRIGHT_YELLOW, BLACK);
+            centreText("Welcome to Nonograms!", 7);
+            setColours(WHITE, BLACK);
+            centreText("a picture puzzle game for the Agon", 9);
+            setColours(BRIGHT_YELLOW, BLACK);
+            centreText("Press H for Help, Q to quit, any other key to start", dims.scrHeightChars-10);
+            if (bSavedGame) {
+                setColours(BRIGHT_WHITE, BLACK);
+                sprintf(sbuff, "[R to resume last save #%d]",savedGameID);
+                centreText(sbuff, dims.scrHeightChars-8);
+            }
+
+            vkey = wait_for_any_key_press();
+            CLS;
+            vdp_reset_viewports();
+            vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+
+            if (vkey == KEY_H || vkey == KEY_h) {
+                clearKeyBuffer(300);
+                showHelp(false);
+                vkey = 0;
+            }
+            if (vkey == KEY_Q || vkey == KEY_q) {
+                bExit = true;
+                sayGoodbye();
+            }
         }
+        if (bSavedGame) {
+            if (vkey == KEY_R || vkey == KEY_r) {
+                clearKeyBuffer(300);
+                // resume saved game
+                if (!createGrids(puzzinfo[savedGameID].gs))
+                {
+                    setColours(BRIGHT_WHITE, BLACK);
+                    printf("\nFailed to create grids\n");
+                    wait_for_any_key();
+                    return -1;
+                }
+                // load the puzzle
+                loadBoard(grid, puzzinfo[savedGameID].fname);
+                // and user saved state
+                sprintf(sbuff,"user/%04d.save", savedGameID);
+                loadBoard(guess, sbuff);
+                
+                drawScreen();
+                bSavedGameLoaded = true;
+                current_puzzid = savedGameID;
+            }
+        }
+
+        clearKeyBuffer(300);
+        if (!bSavedGameLoaded && !bExit)
+        {
+            current_puzzid = loadDialogGUI(current_puzzid);
+            if (current_puzzid < 0) {
+                // -1 == error. Exit.
+                printf("Error\n");
+                goto prog_exit;
+            }
+        }
+        clearKeyBuffer(300);
+        vkey=0;
     }
 
     if (bSavedGameLoaded || current_puzzid > 0)
@@ -400,6 +411,19 @@ bool doActions(int vkey, XY* pcursor)
             {
                 clearKeyBuffer(200);
 
+                // save state
+                sprintf(sbuff,"user/%04d.save", current_puzzid);
+                saveBoard(guess, sbuff);
+                if (puzzinfo[current_puzzid-1].state != PUZ_DONE) puzzinfo[current_puzzid-1].state = PUZ_INPROG;
+
+                // write ID for resume
+                FILE *fid = fopen(".resumeid", "wb");
+                if (fid)
+                {
+                    fputc(current_puzzid, fid);
+                    fclose(fid);
+                }
+
                 // Call load dialog
                 CLS;
                 title("Nonograms by Robogeek", 14, 11);
@@ -408,8 +432,8 @@ bool doActions(int vkey, XY* pcursor)
                     printf("Error!\nGOODBYE!\n");
                     return true; // end
                 } else if (current_puzzid == 0) {
-                    sayGoodbye();
-                    return true; // end
+                    CLS;
+                    drawScreen();
                 }
                 if (ulist)
                 {
@@ -432,15 +456,20 @@ bool doActions(int vkey, XY* pcursor)
 
                 if (areYouSure("QUIT: Are you sure?")) {
                     // save 
-                    saveBoard(grid, ".saveboard");
-                    saveBoard(guess, ".savestate");
-                    // write ID
-                    FILE *fid = fopen(".saveid", "wb");
+                    sprintf(sbuff,"user/%04d.save", current_puzzid);
+                    saveBoard(guess, sbuff);
+                    if (puzzinfo[current_puzzid-1].state != PUZ_DONE) puzzinfo[current_puzzid-1].state = PUZ_INPROG;
+
+                    // write ID for resume
+                    FILE *fid = fopen(".resumeid", "wb");
                     if (fid)
                     {
                         fputc(current_puzzid, fid);
                         fclose(fid);
                     }
+
+                    // rewrite user file
+                    writeUserInfo("user/user.txt");
                     
                     endprog = true;
                     sayGoodbye();
@@ -497,11 +526,19 @@ bool doActions(int vkey, XY* pcursor)
                 clearKeyBuffer(300);
 
                 // save 
-                saveBoard(grid, ".saveboard");
-                saveBoard(guess, ".savestate");
+                sprintf(sbuff,"user/%04d.save", current_puzzid);
+                saveBoard(guess, sbuff);
+                // write ID
+                FILE *fid = fopen(".resumeid", "wb");
+                if (fid)
+                {
+                    fputc(current_puzzid, fid);
+                    fclose(fid);
+                }
+                if (puzzinfo[current_puzzid-1].state != PUZ_DONE) puzzinfo[current_puzzid-1].state = PUZ_INPROG;
             }
             break;
-    }    
+    }
     return endprog;
 }
 
@@ -527,12 +564,30 @@ void drawScreen()
     viewMini(guess);
 }
 
+void showFinalBitmap(int id, int X, int Y, int MS)
+{
+    char rgb2fname[24] = "data/";
+    int buffid = 4;
+    int idx = id - 1;
+    strcpy(&rgb2fname[5], puzzinfo[idx].fname);
+    rgb2fname[5+7]='r';
+    rgb2fname[5+8]='g';
+    rgb2fname[5+9]='b';
+    rgb2fname[5+10]='2';
+    rgb2fname[5+11]=0;
+    setColours(BLACK, BLACK);
+    vdp_filled_rectangle(X, Y, X+MS-1, Y+MS-1);
+    load_bitmap_file(rgb2fname,MS, MS, buffid);
+    vdp_move_to(0,0);
+    setColours(WHITE, BLACK);
+    //printf("FILE: %s\n",rgb2fname);
+    vdp_select_bitmap(buffid);
+    vdp_draw_bitmap(X, Y);
+}
 
 int loadDialogGUI(int cid)
 {
     int selid=0;
-    int num_puzz = loadFileInfo("data/puzzles.txt");
-    loadUserInfo("data/user.txt");
     if (num_puzz > 0)
     {
         int picgrid_size = 64;
@@ -542,10 +597,11 @@ int loadDialogGUI(int cid)
 
 
         // Display a grid of puzzles
-        int qbuffid = 2;
+        int qbuffid = 2, rbuffid = 3;
         int qbsize = 40;
-        int buffid = 3;
+        int buffid = 4;
         load_bitmap_file("data/q2.rgb2", qbsize, qbsize, qbuffid);
+        load_bitmap_file("data/r2.rgb2", qbsize, qbsize, rbuffid);
         char rgb2fname[20] = "data/";
         int C1,C2,MS;
         for (int idx=0; idx<num_puzz; idx++)
@@ -575,7 +631,7 @@ int loadDialogGUI(int cid)
                     MS = 25;
                     break;
             }
-            // coulour coded background
+            // colour coded background
             setColours(C1, BLACK);
             vdp_filled_rectangle(x+4,y+12,x+picgrid_size-4,y+picgrid_size-4);
 
@@ -586,22 +642,16 @@ int loadDialogGUI(int cid)
 
             if (puzzinfo[idx].state == PUZ_DONE)
             {
-                strcpy(&rgb2fname[5], puzzinfo[idx].fname);
-                rgb2fname[5+7]='r';
-                rgb2fname[5+8]='g';
-                rgb2fname[5+9]='b';
-                rgb2fname[5+10]='2';
-                rgb2fname[5+11]=0;
-                setColours(BLACK, BLACK);
-                vdp_filled_rectangle(x+(picgrid_size-MS)/2,y+8+(picgrid_size-MS)/2,
-                        x+(picgrid_size-MS)/2+MS-1,y+8+(picgrid_size-MS)/2+MS-1);
-                load_bitmap_file(rgb2fname,MS, MS, buffid);
-                vdp_move_to(0,0);
-                setColours(WHITE, BLACK);
-                //printf("FILE: %s\n",rgb2fname);
-                vdp_select_bitmap(buffid);
-                vdp_draw_bitmap(x+(picgrid_size-MS)/2, y+8+(picgrid_size-MS)/2);
-            } else {
+                showFinalBitmap(puzzinfo[idx].id, x+(picgrid_size-MS)/2, y+8+(picgrid_size-MS)/2, MS);
+            } 
+            else if (puzzinfo[idx].state == PUZ_INPROG)
+            {
+                // Recycle bitmap
+                vdp_select_bitmap(rbuffid);
+                vdp_draw_bitmap(x+(picgrid_size-qbsize)/2, y+8+(picgrid_size-qbsize)/2);
+            }
+            else // not started puzzle
+            {
                 // Q? bitmap    
                 vdp_select_bitmap(qbuffid);
                 vdp_draw_bitmap(x+(picgrid_size-qbsize)/2, y+8+(picgrid_size-qbsize)/2);
@@ -715,12 +765,16 @@ int loadDialogGUI(int cid)
                 return -1;
             }
 
+            // load the board
             if (!loadBoard(grid, filename))
             {
                 printf("\nFailed to load board\n");
                 wait_for_any_key();
                 return -1;
             }
+            // and user saved state
+            sprintf(sbuff,"user/%04d.save", puzzinfo[selid].id);
+            loadBoard(guess, sbuff);
             drawScreen();
 
         } else {
@@ -737,7 +791,7 @@ int loadDialogGUI(int cid)
 // Load up the puzzle info file
 int loadFileInfo(char* puzzles_fname)
 {
-    int num_puzz=0;
+    int cnt=0;
     char buff[80]; char* token;
     FILE* fptr = fopen(puzzles_fname, "r");
     if (!fptr) {
@@ -745,14 +799,14 @@ int loadFileInfo(char* puzzles_fname)
     } else {
         //CLS;
         if (!fgets(buff,80,fptr)) return -1;
-        num_puzz = atoi(buff);
+        cnt = atoi(buff);
 
         if (!puzzinfo) {
-            puzzinfo = (PUZZINFO*) calloc(num_puzz, sizeof(PUZZINFO));
+            puzzinfo = (PUZZINFO*) calloc(cnt, sizeof(PUZZINFO));
             if (!puzzinfo) return -1;
         }
 
-        for (int i=0; i<num_puzz; i++) {
+        for (int i=0; i<cnt; i++) {
             if (!fgets(buff,80,fptr)) continue;
 
             token = strtok(buff, ","); if (!token) return -1;
@@ -773,28 +827,44 @@ int loadFileInfo(char* puzzles_fname)
             //printf("%d: <%d> <%d> <%s> <%s> <%s>\n",i,puzzinfo[i].id,puzzinfo[i].gs,puzzinfo[i].fname,puzzinfo[i].title,puzzinfo[i].clue);
         }
     }
-    return num_puzz;
+    return cnt;
 }
 
 int loadUserInfo(char* userinfo_fname)
 {
-    char buff[250]; char* token = NULL;
+    char buff[40]; char* token = NULL;
     FILE* fptr = fopen(userinfo_fname, "r");
-    if (!fptr) {
-        //TAB(1,0);printf("can't open %s", userinfo_fname);
-    } else {
-        if (!fgets(buff,250,fptr)) return -1;
-        token = strtok(buff, ",");
-        while (token)
+    if (fptr) {
+        // each line is a puzzle id and a state
+        while (fgets(buff,40,fptr))
         {
+            token = strtok(buff, ",");
             int id = atoi(token);
-            puzzinfo[id].state = PUZ_DONE;
             token = strtok(NULL, ",");
-        };
+            puzzinfo[id-1].state = atoi(token);
+        }
     }
     return 0;
 }
 
+int writeUserInfo(char *userinfo_fname)
+{
+    FILE* fptr = fopen(userinfo_fname, "w");
+    if (!fptr) {
+        TAB(1,0);printf("can't open %s for write", userinfo_fname);
+        return -1;
+    } else {
+        for (int idx=0; idx<num_puzz; idx++)
+        {
+            if (puzzinfo[idx].state > 0)
+            {
+                fprintf(fptr, "%d,%d\n", puzzinfo[idx].id, puzzinfo[idx].state);
+            }
+        }
+        fclose(fptr);
+    }
+    return 0;
+}
 
 bool createGrids(int GS)
 { 
@@ -824,6 +894,14 @@ void checkWin()
             msgBoxModal(30,21, BRIGHT_GREEN, BRIGHT_YELLOW);
             TAB(9,10);printf("You did it!!");
             clearKeyBuffer(300);
+
+            puzzinfo[current_puzzid-1].state = PUZ_DONE;
+
+            // Display completed bitmap
+            int MS = 40;
+            if (dims.gs == 15) MS=30;
+            if (dims.gs == 25) MS=25;
+            showFinalBitmap(current_puzzid, 30*8+10, 21*8+16, MS);
 
             wait_for_any_key();
             vdp_reset_viewports();
