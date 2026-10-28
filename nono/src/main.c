@@ -48,7 +48,7 @@ int loadUserInfo(char* userinfo_fname);
 int writeUserInfo(char *userinfo_fname);
 bool createGrids(int GS);
 void redraw_screen(uint8_t* g);
-void checkWin();
+bool checkWin();
 
 bool addUndo(uint8_t x, uint8_t y, uint8_t old_state, uint8_t new_state);
 bool deleteList(ULENTRY* ulfrom);
@@ -156,7 +156,10 @@ int main(int argc, char **argv) {
             if (vkey == KEY_R || vkey == KEY_r) {
                 clearKeyBuffer(300);
                 // resume saved game
-                if (!createGrids(puzzinfo[savedGameID].gs))
+                current_puzzid = savedGameID;
+                int GS = puzzinfo[current_puzzid-1].gs;
+                init_dims(GS);
+                if (!createGrids(GS))
                 {
                     setColours(BRIGHT_WHITE, BLACK);
                     printf("\nFailed to create grids\n");
@@ -164,22 +167,25 @@ int main(int argc, char **argv) {
                     return -1;
                 }
                 // load the puzzle
-                loadBoard(grid, puzzinfo[savedGameID].fname);
+                char filename[30];
+                strcpy(filename, "data/");
+                strcpy(&(filename[5]), puzzinfo[current_puzzid-1].fname);
+
+                loadBoard(grid, filename);
                 // and user saved state
-                sprintf(sbuff,"user/%04d.save", savedGameID);
+                sprintf(sbuff,"user/%04d.save", current_puzzid);
                 loadBoard(guess, sbuff);
                 
                 drawScreen();
                 bSavedGameLoaded = true;
-                current_puzzid = savedGameID;
             }
         }
 
         clearKeyBuffer(300);
         if (!bSavedGameLoaded && !bExit)
         {
-            current_puzzid = loadDialogGUI(current_puzzid);
-            if (current_puzzid < 0) {
+            int retcode = loadDialogGUI(current_puzzid);
+            if (retcode < 0) {
                 // -1 == error. Exit.
                 printf("Error\n");
                 goto prog_exit;
@@ -223,6 +229,7 @@ prog_exit:
 
     free(puzzinfo);
     free(grid);
+    free(guess);
 
     vdp_cursor_enable(true);
     vdp_write_at_text_cursor();
@@ -239,7 +246,21 @@ void doMark(XY* pcursor, uint8_t type, bool noCursorChange)
     addUndo(pcursor->x, pcursor->y, get_grid(guess, pcursor), type);
     set_grid(guess, pcursor, type);
     redrawGridSquare(guess, pcursor);
-    if (type==SQ_FILL || type==SQ_CROSS) checkWin();
+    if (type==SQ_FILL || type==SQ_CROSS) 
+    {
+        if (checkWin())
+        {
+            // Call load dialog
+            int retcode = loadDialogGUI(current_puzzid);
+            if (retcode < 0) {
+                printf("Error!\n\n");
+                return; // end
+            } else if (current_puzzid == 0) {
+                CLS;
+                drawScreen();
+            }
+        }
+    }
     if (!noCursorChange) cursorDraw(pcursor);
 }
 
@@ -425,10 +446,8 @@ bool doActions(int vkey, XY* pcursor)
                 }
 
                 // Call load dialog
-                CLS;
-                title("Nonograms by Robogeek", 14, 11);
-                current_puzzid = loadDialogGUI(current_puzzid);
-                if (current_puzzid < 0) {
+                int retcode = loadDialogGUI(current_puzzid);
+                if (retcode < 0) {
                     printf("Error!\nGOODBYE!\n");
                     return true; // end
                 } else if (current_puzzid == 0) {
@@ -562,6 +581,7 @@ void drawScreen()
     refreshBoard(guess);
     refreshCounts(grid);
     viewMini(guess);
+    TAB(2,7);setColours(WHITE,BLACK);printf("CLUE: %s",puzzinfo[current_puzzid-1].clue);
 }
 
 void showFinalBitmap(int id, int X, int Y, int MS)
@@ -585,6 +605,91 @@ void showFinalBitmap(int id, int X, int Y, int MS)
     vdp_draw_bitmap(X, Y);
 }
 
+void displayPuzzleGrid(int fromID, int picgrid_size, int picgrid_w, int picgrid_h)
+{
+    int pic_row = 0, pic_col = 0;
+    int qbuffid = 2, rbuffid = 3;
+    int qbsize = 40;
+    int buffid = 4;
+    char rgb2fname[20] = "data/";
+    int C1,C2,MS;
+
+    CLS;
+    title("Select a Puzzle", 14, 11);
+    TAB(2,dims.scrHeightChars-1);setColours(BRIGHT_YELLOW,BLACK); 
+    printf("Arrow keys to move, Return to Select, Space for Info, R to reset, Q to quit");
+
+    load_bitmap_file("data/q2.rgb2", qbsize, qbsize, qbuffid);
+    load_bitmap_file("data/r2.rgb2", qbsize, qbsize, rbuffid);
+    
+    for (int idx=0; idx<num_puzz; idx++)
+    {
+        int x = 8 + (pic_col*picgrid_size);
+        int y = 16 + (pic_row*picgrid_size);
+        switch(puzzinfo[idx].gs)
+        {
+            case 10:
+                C1 = BLUE;
+                C2 = WHITE;
+                MS = 40;
+                break;
+            case 15:
+                C1 = GREEN;
+                C2 = BRIGHT_WHITE;
+                MS = 30;
+                break;
+            case 20:
+                C1 = CYAN;
+                C2 = BLACK;
+                MS = 40;
+                break;
+            case 25:
+                C1 = MAGENTA;
+                C2 = BLACK;
+                MS = 25;
+                break;
+        }
+        // colour coded background
+        setColours(C1, BLACK);
+        vdp_filled_rectangle(x+4,y+12,x+picgrid_size-4,y+picgrid_size-4);
+
+        // number above
+        setColours(BRIGHT_YELLOW, BLACK);
+        vdp_write_at_graphics_cursor();
+        vdp_move_to(x+12, y+4); printf("#%03d",puzzinfo[idx].id);
+
+        if (puzzinfo[idx].state == PUZ_DONE)
+        {
+            showFinalBitmap(puzzinfo[idx].id, x+(picgrid_size-MS)/2, y+8+(picgrid_size-MS)/2, MS);
+        } 
+        else if (puzzinfo[idx].state == PUZ_INPROG)
+        {
+            // Recycle bitmap
+            vdp_select_bitmap(rbuffid);
+            vdp_draw_bitmap(x+(picgrid_size-qbsize)/2, y+8+(picgrid_size-qbsize)/2);
+        }
+        else // not started puzzle
+        {
+            // Q? bitmap    
+            vdp_select_bitmap(qbuffid);
+            vdp_draw_bitmap(x+(picgrid_size-qbsize)/2, y+8+(picgrid_size-qbsize)/2);
+        }
+
+        // Size
+        setColours(C2, BLACK);
+        vdp_write_at_graphics_cursor();
+        vdp_move_to(x+4, y+12); printf("%dx%d",puzzinfo[idx].gs, puzzinfo[idx].gs);
+        
+        // Next grid square
+        pic_col++;
+        if (pic_col==picgrid_w) {
+            pic_row++;
+            pic_col = 0;
+        }
+    }
+
+}
+
 int loadDialogGUI(int cid)
 {
     int selid=0;
@@ -593,82 +698,10 @@ int loadDialogGUI(int cid)
         int picgrid_size = 64;
         int picgrid_w = (int)((dims.scrWidthPix - 16) / picgrid_size);
         int picgrid_h = (int)((dims.scrHeightPix - 32) / picgrid_size);
-        int pic_row = 0, pic_col = 0;
 
 
         // Display a grid of puzzles
-        int qbuffid = 2, rbuffid = 3;
-        int qbsize = 40;
-        int buffid = 4;
-        load_bitmap_file("data/q2.rgb2", qbsize, qbsize, qbuffid);
-        load_bitmap_file("data/r2.rgb2", qbsize, qbsize, rbuffid);
-        char rgb2fname[20] = "data/";
-        int C1,C2,MS;
-        for (int idx=0; idx<num_puzz; idx++)
-        {
-            int x = 8 + (pic_col*picgrid_size);
-            int y = 16 + (pic_row*picgrid_size);
-            switch(puzzinfo[idx].gs)
-            {
-                case 10:
-                    C1 = BLUE;
-                    C2 = WHITE;
-                    MS = 40;
-                    break;
-                case 15:
-                    C1 = GREEN;
-                    C2 = BRIGHT_WHITE;
-                    MS = 30;
-                    break;
-                case 20:
-                    C1 = CYAN;
-                    C2 = BLACK;
-                    MS = 40;
-                    break;
-                case 25:
-                    C1 = MAGENTA;
-                    C2 = BLACK;
-                    MS = 25;
-                    break;
-            }
-            // colour coded background
-            setColours(C1, BLACK);
-            vdp_filled_rectangle(x+4,y+12,x+picgrid_size-4,y+picgrid_size-4);
-
-            // number above
-            setColours(BRIGHT_YELLOW, BLACK);
-            vdp_write_at_graphics_cursor();
-            vdp_move_to(x+12, y+4); printf("#%03d",puzzinfo[idx].id);
-
-            if (puzzinfo[idx].state == PUZ_DONE)
-            {
-                showFinalBitmap(puzzinfo[idx].id, x+(picgrid_size-MS)/2, y+8+(picgrid_size-MS)/2, MS);
-            } 
-            else if (puzzinfo[idx].state == PUZ_INPROG)
-            {
-                // Recycle bitmap
-                vdp_select_bitmap(rbuffid);
-                vdp_draw_bitmap(x+(picgrid_size-qbsize)/2, y+8+(picgrid_size-qbsize)/2);
-            }
-            else // not started puzzle
-            {
-                // Q? bitmap    
-                vdp_select_bitmap(qbuffid);
-                vdp_draw_bitmap(x+(picgrid_size-qbsize)/2, y+8+(picgrid_size-qbsize)/2);
-            }
-
-            // Size
-            setColours(C2, BLACK);
-            vdp_write_at_graphics_cursor();
-            vdp_move_to(x+4, y+12); printf("%dx%d",puzzinfo[idx].gs, puzzinfo[idx].gs);
-            
-            // Next grid square
-            pic_col++;
-            if (pic_col==picgrid_w) {
-                pic_row++;
-                pic_col = 0;
-            }
-        }
+        displayPuzzleGrid(0, picgrid_size, picgrid_w, picgrid_h);
 
         // Interactive GUI - arrow-keys and Enter
         int offx,offy;
@@ -682,6 +715,7 @@ int loadDialogGUI(int cid)
         bool selected = false;
         int vkey;
         clearKeyBuffer(300);
+        bool bClearPuzzleOnLoad = false;
         while (!selected)
         {
             offx = 8 + (selx*picgrid_size);
@@ -743,13 +777,45 @@ int loadDialogGUI(int cid)
                     selected=true;
                     selid=-1;
                     break;
+                case KEY_space:
+                    msgBoxModal(40,20, BRIGHT_YELLOW, BRIGHT_WHITE);
+                    TAB(1,2);printf("ID: %d",puzzinfo[selid].id);
+                    TAB(1,4);printf("FILE: %s",puzzinfo[selid].fname);
+                    TAB(1,6);printf("SIZE: %dx%d",puzzinfo[selid].gs, puzzinfo[selid].gs);
+                    TAB(1,8);printf("CLUE: %s",puzzinfo[selid].clue);
+                    clearKeyBuffer(300);
+                    wait_for_any_key();
+                    vdp_reset_viewports();
+                    vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
+                    clearKeyStates();
+                    CLS;
+                    displayPuzzleGrid(0, picgrid_size, picgrid_w, picgrid_h);
+                    break;
+                case KEY_R:
+                case KEY_r:
+                    clearKeyBuffer(300);
+                    if (areYouSure("RESET and play again?"))
+                    {
+                        puzzinfo[selid].state=0;
+                        bClearPuzzleOnLoad = true;
+                        selected=true;
+                    } else {
+                        clearKeyStates();
+                        CLS;
+                        displayPuzzleGrid(0, picgrid_size, picgrid_w, picgrid_h);
+                    }
+                    break;
             }
             clearKeyBuffer(300);
         }
         if (selid < 0)
         {
             // exit load
-            return 0;   // this is a puzzle-id (starts at 1, not the index into the array)
+            CLS;
+            // don't change current puzzle
+            drawScreen();
+            return 0;   // this returns a puzzle-id (starts at 1, not the index into the array)
+                        // 0 means not loaded
         }
             
         if (strlen(puzzinfo[selid].fname)>0)
@@ -758,11 +824,14 @@ int loadDialogGUI(int cid)
             strcpy(filename, "data/");
             strcpy(&(filename[5]), puzzinfo[selid].fname);
 
-            if (!createGrids(puzzinfo[selid].gs))
+            current_puzzid = puzzinfo[selid].id;
+            int GS = puzzinfo[selid].gs;
+            init_dims(GS);
+            if (!createGrids(GS))
             {
                 printf("\nFailed to create grids\n");
                 wait_for_any_key();
-                return -1;
+                return -1; // Error
             }
 
             // load the board
@@ -770,17 +839,20 @@ int loadDialogGUI(int cid)
             {
                 printf("\nFailed to load board\n");
                 wait_for_any_key();
-                return -1;
+                return -1; // Error
             }
             // and user saved state
-            sprintf(sbuff,"user/%04d.save", puzzinfo[selid].id);
-            loadBoard(guess, sbuff);
+            if (!bClearPuzzleOnLoad)
+            {
+                sprintf(sbuff,"user/%04d.save", puzzinfo[selid].id);
+                loadBoard(guess, sbuff);
+            }
             drawScreen();
 
         } else {
             TAB(1,3);printf("Failed to load\n");
             wait_for_any_key();
-            return -1;
+            return -1; // Error
         }
 
     }
@@ -887,12 +959,16 @@ bool createGrids(int GS)
     return true;
 }
 
-void checkWin()
+bool checkWin()
 {
     if (isGridComplete(guess)) {
         if (checkSolution(guess, grid) == true) {
-            msgBoxModal(30,21, BRIGHT_GREEN, BRIGHT_YELLOW);
-            TAB(9,10);printf("You did it!!");
+            XY boxSizeChr={30,21};
+            XY boxTLpix;
+            boxTLpix.x = (dims.scrWidthPix - boxSizeChr.x*8) / 2;
+            boxTLpix.y = (dims.scrHeightPix - boxSizeChr.y*8) / 2;
+            msgBoxModal(boxSizeChr.x,boxSizeChr.y, BRIGHT_GREEN, BRIGHT_YELLOW);
+            TAB(9,4);printf("You did it!!");
             clearKeyBuffer(300);
 
             puzzinfo[current_puzzid-1].state = PUZ_DONE;
@@ -901,15 +977,19 @@ void checkWin()
             int MS = 40;
             if (dims.gs == 15) MS=30;
             if (dims.gs == 25) MS=25;
-            showFinalBitmap(current_puzzid, 30*8+10, 21*8+16, MS);
+            showFinalBitmap(current_puzzid, boxTLpix.x+(boxSizeChr.x*8-MS)/2, boxTLpix.y+7*8, MS);
 
+            int txtlen= strlen(puzzinfo[current_puzzid-1].title);
+            TAB((boxSizeChr.x-txtlen)/2,14);printf("%s",puzzinfo[current_puzzid-1].title);
             wait_for_any_key();
             vdp_reset_viewports();
             vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
             clearKeyStates();
             drawScreen();
+            return true;
         }
     }
+    return false;
 }
 
 // Add undo. Create a new node.  
