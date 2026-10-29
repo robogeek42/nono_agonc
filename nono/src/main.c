@@ -595,6 +595,8 @@ void showFinalBitmap(int id, int X, int Y, int MS)
     rgb2fname[5+9]='b';
     rgb2fname[5+10]='2';
     rgb2fname[5+11]=0;
+    setColours(BRIGHT_CYAN, BLACK);
+    vdp_rectangle(X-1, Y-1, X+MS, Y+MS);
     setColours(BLACK, BLACK);
     vdp_filled_rectangle(X, Y, X+MS-1, Y+MS-1);
     load_bitmap_file(rgb2fname,MS, MS, buffid);
@@ -778,7 +780,7 @@ int loadDialogGUI(int cid)
                     selid=-1;
                     break;
                 case KEY_space:
-                    msgBoxModal(40,20, BRIGHT_YELLOW, BRIGHT_WHITE);
+                    msgBoxModal(40,14, BRIGHT_YELLOW, BRIGHT_WHITE);
                     TAB(1,2);printf("ID: %d",puzzinfo[selid].id);
                     TAB(1,4);printf("FILE: %s",puzzinfo[selid].fname);
                     TAB(1,6);printf("SIZE: %dx%d",puzzinfo[selid].gs, puzzinfo[selid].gs);
