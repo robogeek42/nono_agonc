@@ -69,6 +69,11 @@ char sbuff[80];
 int holdCount = 0;
 
 int current_puzzid = 0;
+
+int mark_state_old = 0;
+int mark_state_new = 0;
+
+bool option_toggle = true;
    
 int main(int argc, char **argv) {
     int vkey=0;
@@ -269,10 +274,26 @@ bool checkRepeatableActions(XY* pcursor)
 {
     bool repeatable = false;
     if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true) {
-        doMark(pcursor, SQ_CROSS, false); repeatable=true;
+        if (option_toggle)
+        {
+            if (get_grid(guess, pcursor) == mark_state_old) {
+                doMark(pcursor, mark_state_new, false);
+            }
+        } else {
+            doMark(pcursor, SQ_CROSS, false);
+        }
+        repeatable=true;
     }
     if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true) {
-        doMark(pcursor, SQ_FILL, false); repeatable=true;
+        if (option_toggle)
+        {
+            if (get_grid(guess, pcursor) == mark_state_old) {
+                doMark(pcursor, mark_state_new, false);
+            }
+        } else {
+            doMark(pcursor, SQ_FILL, false);
+        }
+        repeatable=true;
     }
     if (getKeyState(KEY_delete)==true || getKeyState(KEY_D)==true || getKeyState(KEY_d)==true) {
         doMark(pcursor, SQ_EMPTY, false); repeatable=true;
@@ -351,7 +372,19 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_x:
             if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true)
             {
-                doMark(pcursor, SQ_CROSS, false); holdCount=1;
+                if (option_toggle)
+                {
+                    mark_state_old = get_grid(guess, pcursor);
+                    if (mark_state_old == SQ_CROSS)
+                    {
+                        mark_state_new = SQ_EMPTY;
+                    } else {
+                        mark_state_new = SQ_CROSS;
+                    }
+                    doMark(pcursor, mark_state_new, false); holdCount=1;
+                } else {
+                    doMark(pcursor, SQ_CROSS, false); holdCount=1;
+                }
             }
             break;
         case KEY_space:
@@ -359,7 +392,19 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_m:
             if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true)
             {
-                doMark(pcursor, SQ_FILL, false); holdCount=1;
+                if (option_toggle)
+                {
+                    mark_state_old = get_grid(guess, pcursor);
+                    if (mark_state_old == SQ_FILL)
+                    {
+                        mark_state_new = SQ_EMPTY;
+                    } else {
+                        mark_state_new = SQ_FILL;
+                    }
+                    doMark(pcursor, mark_state_new, false); holdCount=1;
+                } else {
+                    doMark(pcursor, SQ_FILL, false); holdCount=1;
+                }
             }
             break;
         case KEY_delete:
@@ -557,6 +602,7 @@ bool doActions(int vkey, XY* pcursor)
                 if (puzzinfo[current_puzzid-1].state != PUZ_DONE) puzzinfo[current_puzzid-1].state = PUZ_INPROG;
             }
             break;
+
     }
     return endprog;
 }
@@ -1334,3 +1380,4 @@ void clearMemoMarks()
         }
     }
 }
+
