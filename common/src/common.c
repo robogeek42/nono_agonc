@@ -272,6 +272,7 @@ bool calc_column_run(uint8_t* grid, int col)
 
     // start from bottom and count
     int run = 0;
+    int num_runs = 0;
     for (p.y=dims.gs-1; p.y>=0; p.y--) {
         if (get_grid(grid, &p)==SQ_FILL) {
             run++;
@@ -291,6 +292,7 @@ bool calc_column_run(uint8_t* grid, int col)
             }
             run = 0;
             y -= 8;
+            num_runs++;
         }
     }
     if (run > 0) {
@@ -305,6 +307,11 @@ bool calc_column_run(uint8_t* grid, int col)
             vdp_move_to(x, y);
             printf("%d",run);
         }
+    }
+    if (num_runs == 0) {
+            vdp_set_graphics_colour(0, BRIGHT_WHITE);
+            vdp_move_to(x, y);
+            printf("-");
     }
     return true;
 }
@@ -339,6 +346,7 @@ bool calc_row_run(uint8_t* grid, int row)
     // start from right and count back
     int run = 0;
     int first = true;
+    int num_runs = 0;
     for (p.x=dims.gs-1; p.x>=0; p.x--) {
         if (get_grid(grid, &p)==SQ_FILL) {
             run++;
@@ -362,6 +370,7 @@ bool calc_row_run(uint8_t* grid, int row)
             }
             run = 0;
             first = false;
+            num_runs++;
         }
     }
     if (run > 0) {
@@ -380,7 +389,13 @@ bool calc_row_run(uint8_t* grid, int row)
             printf("%d,",run);
             x -= 8; if (run>9) x -= 8;
         }
+    } 
+    if (num_runs == 0) {
+            vdp_set_graphics_colour(0, BRIGHT_WHITE);
+            vdp_move_to(x, y);
+            printf("-");
     }
+
     return true;
 }
 
@@ -510,10 +525,6 @@ void refreshBoard(uint8_t* grid)
         for (pos.x=0;pos.x<dims.gs;pos.x++) {
             redrawGridSquare(grid, &pos);
         }
-        calc_row_run(grid, pos.y);
-    }
-    for (pos.x=0;pos.x<dims.gs;pos.x++) {
-        calc_column_run(grid, pos.x);
     }
 }
 void refreshCounts(uint8_t* grid)

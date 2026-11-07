@@ -570,6 +570,7 @@ bool doActions(int vkey, XY* pcursor)
                 }
                 guess[0] = SQ_EMPTY;
                 refreshBoard(guess);
+                refreshCounts(grid);
             }
             break;
         case KEY_H:
