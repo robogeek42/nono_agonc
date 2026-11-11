@@ -1,4 +1,4 @@
-APPS = nono nonoed
+APPS = nono
 BINARIES = $(patsubst %,%.bin,$(APPS))
 MYLIBS = common
 FAE_HOME = ~/agon/fab
@@ -58,8 +58,6 @@ clean:
 	@rm -f $(BINARIES)
 	@cd nono; make clean
 	@cd nono; rm -rf lib include
-	@cd nonoed; make clean
-	@cd nonoed; rm -rf lib include
 	@cd common; rm -rf include
 
 .PHONY: all clean $(MYLIBS)
@@ -78,7 +76,6 @@ emu: $(BINARIES)
 sendbins: $(BINARIES)
 	acmd cd /nono
 	asend nono.bin
-	asend nonoed.bin
 
 sendnono: nono.bin
 	acmd cd /nono
