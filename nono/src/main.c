@@ -124,8 +124,8 @@ int main(int argc, char **argv) {
             clearKeyBuffer(300);
             CLS;
             title("Nonograms by Robogeek", 14, 11);
-            load_bitmap_file("nono.rgb2", bm_width, bm_height, 0);
-            load_bitmap_file("nono_small.rgb2", bms_width, bms_height, 1);
+            load_bitmap_file("data/logo.rgb2", bm_width, bm_height, 0);
+            load_bitmap_file("data/logo_small.rgb2", bms_width, bms_height, 1);
             vdp_select_bitmap(0);
             vdp_draw_bitmap((dims.scrWidthPix-bm_width)/2,120);
         

@@ -52,12 +52,12 @@ install: $(BINARIES)
 	@rm -f $(SD_INSTALL_DIR)/data/*
 	@cp -rf data/* $(SD_INSTALL_DIR)/data/
 	@mkdir -p $(SD_INSTALL_DIR)/user
-	@cp -rf nono*.rgb2 $(SD_INSTALL_DIR)/
 
 clean:
 	@rm -f $(BINARIES)
 	@cd nono; make clean
 	@cd nono; rm -rf lib include
+	@cd common; make clean
 	@cd common; rm -rf include
 
 .PHONY: all clean $(MYLIBS)
@@ -69,7 +69,6 @@ emu: $(BINARIES)
 	@cp $(BINARIES) $(EMU_INSTALL_DIR)
 	@cp -rf data $(EMU_INSTALL_DIR)
 	@cp -rf user $(EMU_INSTALL_DIR)
-	@cp -rf nono*.rgb2 $(EMU_INSTALL_DIR)
 	@cd $(FAE_HOME) ; $(FAE_HOME)/fab-agon-emulator $(FAE_ARGS)
 
 
