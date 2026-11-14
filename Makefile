@@ -1,6 +1,6 @@
-APPS = nono
-BINARIES = $(patsubst %,%.bin,$(APPS))
-MYLIBS = common
+NAME = nono
+BINARY = bin/$(NAME).bin
+DESCRIPTION = "Nonogram game by Robogeek"
 FAE_HOME = ~/agon/fab
 FAE_ARGS = --scale integer --renderer hw
 
@@ -8,74 +8,27 @@ SDCARD=~/agon/sdcard_sync
 SD_INSTALL_DIR=$(SDCARD)/nono
 EMU_INSTALL_DIR=$(FAE_HOME)/sdcard/nono
 
-all: $(APPS)
-$(APPS): $(BINARIES)
+# ----------------------------
+include $(shell agondev-config --makefile)
 
-%.bin: $(MYLIBS) %/src/main.c
-	@echo '|'===========================
-	@echo '|' $*
-	@echo '|'---------------------------
-	@echo "|Copy librares to $*"
-	@mkdir -p $*/lib
-# I don't know how to loop over a variable in a makefile :L
-# But I am just assuming it is one LIB
-	@cp $(MYLIBS)/bin/lib$(MYLIBS).a $*/lib
-	@echo "Copy includes"
-	@mkdir -p $*/include
-	@cp -f include/* $*/include/
-#
-	@echo '|'---------------------------
-	@echo "|Make App $*"
-	$(MAKE) -C $* clean
-	$(MAKE) -C $* install
-	@echo '|'===========================
-	@echo
+.PHONY: emu
 
-$(MYLIBS): 
-	@echo '|'===========================
-	@echo "|Copy includes to $@"
-	@mkdir -p $@/include
-	@cp -f include/* $@/include/
-	@echo '|'---------------------------
-	@echo "|Make Library $@"
-	cd $@ ; make clean
-	cd $@ ; make lib
-	@echo '|'===========================
-	@echo
-	
-
-install: $(BINARIES)
+install: $(BINARY)
 	@echo Install to $(SD_INSTALL_DIR)
 	@mkdir -p $(SD_INSTALL_DIR)
-	@cp $(BINARIES) $(SD_INSTALL_DIR)
+	@cp $(BINARY) $(SD_INSTALL_DIR)
 	@mkdir -p $(SD_INSTALL_DIR)/data
 	@rm -f $(SD_INSTALL_DIR)/data/*
 	@cp -rf data/* $(SD_INSTALL_DIR)/data/
 	@mkdir -p $(SD_INSTALL_DIR)/user
 
-clean:
-	@rm -f $(BINARIES)
-	@cd nono; make clean
-	@cd nono; rm -rf lib include
-	@cd common; make clean
-	@cd common; rm -rf include
-
-.PHONY: all clean $(MYLIBS)
-
-
-emu: $(BINARIES)
+emu: $(BINARY)
 	@echo Install to $(EMU_INSTALL_DIR)
 	@mkdir -p $(EMU_INSTALL_DIR)
-	@cp $(BINARIES) $(EMU_INSTALL_DIR)
+	@cp $(BINARY) $(EMU_INSTALL_DIR)
 	@cp -rf data $(EMU_INSTALL_DIR)
 	@cp -rf user $(EMU_INSTALL_DIR)
-	@cd $(FAE_HOME) ; $(FAE_HOME)/fab-agon-emulator $(FAE_ARGS)
 
-
-sendbins: $(BINARIES)
-	acmd cd /nono
-	asend nono.bin
-
-sendnono: nono.bin
+send: nono.bin
 	acmd cd /nono
 	asend nono.bin
