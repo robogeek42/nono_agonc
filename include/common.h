@@ -168,10 +168,6 @@ void msgBoxModal(int width_chars, int height_chars, int border_col, int text_col
 
 void viewMini(uint8_t* grid);
 
-void drawLetterN(int left,int right,int width,int height);
-void drawLetterO(int left,int right,int width,int height);
-void drawLetterG(int left,int right,int width,int height);
-
 int load_bitmap_file( const char *fname, int width, int height, int bmap_id );
 int load_nono_as_rgb2( const char *fname, int bmap_id );
 

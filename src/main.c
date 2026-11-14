@@ -58,8 +58,6 @@ void printUndoList();
 void helpLine(int vline, char *keystr, char *descstr);
 void helpLine2(int vline, char *keystr, char *descstr, char*descstr2);
 void showHelp(bool bDrawScreen);
-void drawNono(int x, int y, int w, int h);
-void openingAnimation();
 void debugPrep(int X, int Y, int W, int H, int COL);
 void clearMemoMarks();
 
@@ -208,7 +206,7 @@ int main(int argc, char **argv) {
         cursor.y = 0;
         cursorDraw(&cursor);
 
-        vdp_keyboard_control( 250, 90, getsysvar_keyled() );
+        vdp_keyboard_control( 250, 120, getsysvar_keyled() );
         bool exit = false;
 
         /* =========================================================
@@ -1337,39 +1335,6 @@ void showHelp(bool bDrawScreen)
     vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
     CLS;
     if (bDrawScreen) drawScreen();
-}
-
-void drawNono(int x, int y, int w, int h)
-{
-    int gap = w / 5;
-    int xpos = x;
-    drawLetterN(xpos, y, w, h);
-    xpos += w+gap;
-    drawLetterO(xpos, y, w, h);
-    xpos += w+gap;
-    drawLetterN(xpos, y, w, h);
-    xpos += w+gap;
-    drawLetterO(xpos, y, w, h);
-}
-void openingAnimation()
-{
-    vdp_mode(129);
-    vdp_set_pixel_coordinates();
-
-    for(int s = 4; s < 140; s+= 4)
-    {
-        int w = s; int h = (s*5)/4;
-        int gap = w/5;
-        int width = (w * 4) + (gap * 3);
-        int xpos = 640/2 - (width/2);
-        int ypos = 480/2 - (h/2);
-
-        CLS;
-        drawNono(xpos, ypos, w, h);
-        vdp_swap();
-        delay(100);
-    }
-    delay(1000);
 }
 
 void debugPrep(int X, int Y, int W, int H, int COL)

@@ -307,6 +307,7 @@ bool calc_column_run(uint8_t* grid, int col)
             vdp_move_to(x, y);
             printf("%d",run);
         }
+        num_runs++;
     }
     if (num_runs == 0) {
             vdp_set_graphics_colour(0, BRIGHT_WHITE);
@@ -389,6 +390,7 @@ bool calc_row_run(uint8_t* grid, int row)
             printf("%d,",run);
             x -= 8; if (run>9) x -= 8;
         }
+        num_runs++;
     } 
     if (num_runs == 0) {
             vdp_set_graphics_colour(0, BRIGHT_WHITE);
@@ -647,47 +649,6 @@ bool areYouSure(const char *msg)
     vdp_set_text_viewport(0, dims.scrHeightChars, dims.scrWidthChars, 0);
 
     return choice;
-}
-
-void drawLetterN(int x,int y,int width,int height)
-{
-    int pm = PLOT_TYPE_FILL_PATH|PLOT_MODE_FG_REL;
-    vdp_move_to(x, y);
-    vdp_plot(pm, 0,height);
-    vdp_plot(pm, width/5,0);
-    vdp_plot(pm, 0, -(height*3)/4);
-    vdp_plot(pm, (width*3)/5, (height*3)/4);
-    vdp_plot(pm, width/5,0);
-    vdp_plot(pm, 0, -height);
-    vdp_plot(pm, -width/5,0);
-    vdp_plot(pm, 0, (height*3)/4);
-    vdp_plot(pm, -(width*3)/5, -(height*3)/4);
-    vdp_plot(pm, -width/5,0);
-}
-void drawLetterO(int x,int y,int width,int height)
-{
-    int centre_x = x+(width/2);
-    int centre_y = y+(height/2);
-    int w_small = (width*2)/3; // width of smaller elipse
-    int h_small = (height*2)/3; // height of smaller elipse
-
-    int pm = PLOT_TYPE_ELIPSE_FILL|PLOT_MODE_FG_ABS;
-
-    // MAIN outer elipse
-    vdp_move_to(centre_x, centre_y); // Centre
-    vdp_move_to(x, centre_y); // left-edge
-    vdp_plot(pm, centre_x, y); // top
-
-    pm = PLOT_TYPE_ELIPSE_FILL|PLOT_MODE_BG_ABS;
-
-    // Inner elipse cut-out
-    vdp_move_to(centre_x, centre_y); // Centre
-    vdp_move_to(centre_x - (w_small/2), centre_y); // left-edge
-    vdp_plot(pm, centre_x, centre_y - (h_small/2)); // top
-
-}
-void drawLetterG(int x,int y,int width,int height)
-{
 }
 
 int load_bitmap_file( const char *fname, int width, int height, int bmap_id )
