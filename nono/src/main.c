@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
         cursor.y = 0;
         cursorDraw(&cursor);
 
-        vdp_keyboard_control( 200, 50, getsysvar_keyled() );
+        vdp_keyboard_control( 250, 90, getsysvar_keyled() );
         bool exit = false;
 
         /* =========================================================
@@ -310,6 +310,7 @@ bool checkRepeatableActions(XY* pcursor)
     return repeatable;
 }
 
+bool bPressed = false;
 // For each type of key execute action
 bool doActions(int vkey, XY* pcursor)
 {
@@ -372,19 +373,25 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_x:
             if (getKeyState(KEY_X)==true || getKeyState(KEY_x)==true)
             {
-                if (option_toggle)
+                if (!bPressed)  // No repeat, it messes with the toggle
                 {
-                    mark_state_old = get_grid(guess, pcursor);
-                    if (mark_state_old == SQ_CROSS)
+                    bPressed=true;
+                    if (option_toggle)
                     {
-                        mark_state_new = SQ_EMPTY;
+                        mark_state_old = get_grid(guess, pcursor);
+                        if (mark_state_old == SQ_CROSS)
+                        {
+                            mark_state_new = SQ_EMPTY;
+                        } else {
+                            mark_state_new = SQ_CROSS;
+                        }
+                        doMark(pcursor, mark_state_new, false); holdCount=1;
                     } else {
-                        mark_state_new = SQ_CROSS;
+                        doMark(pcursor, SQ_CROSS, false); holdCount=1;
                     }
-                    doMark(pcursor, mark_state_new, false); holdCount=1;
-                } else {
-                    doMark(pcursor, SQ_CROSS, false); holdCount=1;
                 }
+            } else {
+                bPressed=false;
             }
             break;
         case KEY_space:
@@ -392,19 +399,25 @@ bool doActions(int vkey, XY* pcursor)
         case KEY_m:
             if (getKeyState(KEY_space)==true || getKeyState(KEY_M)==true || getKeyState(KEY_m)==true)
             {
-                if (option_toggle)
+                if (!bPressed)  // No repeat
                 {
-                    mark_state_old = get_grid(guess, pcursor);
-                    if (mark_state_old == SQ_FILL)
+                    bPressed=true;
+                    if (option_toggle)
                     {
-                        mark_state_new = SQ_EMPTY;
+                        mark_state_old = get_grid(guess, pcursor);
+                        if (mark_state_old == SQ_FILL)
+                        {
+                            mark_state_new = SQ_EMPTY;
+                        } else {
+                            mark_state_new = SQ_FILL;
+                        }
+                        doMark(pcursor, mark_state_new, false); holdCount=1;
                     } else {
-                        mark_state_new = SQ_FILL;
+                        doMark(pcursor, SQ_FILL, false); holdCount=1;
                     }
-                    doMark(pcursor, mark_state_new, false); holdCount=1;
-                } else {
-                    doMark(pcursor, SQ_FILL, false); holdCount=1;
                 }
+            } else {
+                bPressed=false;
             }
             break;
         case KEY_delete:
