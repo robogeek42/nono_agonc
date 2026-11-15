@@ -661,8 +661,10 @@ int load_bitmap_file( const char *fname, int width, int height, int bmap_id )
 		printf( "Failed to allocate %d bytes for buffer.\n",CHUNK_SIZE );
 		return -1;
 	}
-	if ( !(fp = fopen( fname, "rb" ) ) ) {
+    fp = fopen( fname, "rb" );
+	if ( !fp ) {
 		printf( "Error opening file \"%s\". Quitting.\n", fname );
+        free(buffer);
 		return -1;
 	}
 
@@ -676,7 +678,11 @@ int load_bitmap_file( const char *fname, int width, int height, int bmap_id )
 
 		vdp_adv_write_block(0xFA00+bmap_id, size);
 
-		if ( fread( buffer, 1, size, fp ) != (size_t)size ) return 0;
+		if ( fread( buffer, 1, size, fp ) != (size_t)size ) {
+            free(buffer);
+            fclose(fp);
+            return 0;
+        }
 		mos_puts( buffer, size, 0 );
 		//printf(".");
 
@@ -705,14 +711,17 @@ int load_nono_as_rgb2( const char *fname, int bmap_id )
 		return -1;
 	}
 
-	if ( !(fp = fopen( fname, "rb" ) ) ) {
+    fp = fopen( fname, "rb" );
+	if ( !fp ) {
 		printf( "Error opening file \"%s\". Quitting.\n", fname );
+        free(buffer);
 		return -1;
 	}
 
     uint8_t GS=0;
     if ( fread( &GS, 1, 1, fp ) != 1 ) {
         printf("Error reading file");
+        free(buffer);
         return 0;
     }
     //printf("Size %d\n",GS);
@@ -726,7 +735,11 @@ int load_nono_as_rgb2( const char *fname, int bmap_id )
 
 		vdp_adv_write_block(0xFA00+bmap_id, size);
 
-		if ( fread( buffer, 1, size, fp ) != (size_t)size ) return 0;
+		if ( fread( buffer, 1, size, fp ) != (size_t)size ) {
+            fclose(fp);
+            free(buffer);
+            return 0;
+        }
 		mos_puts( buffer, size, 0 );
 		//printf(".");
 

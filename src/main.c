@@ -33,6 +33,8 @@ int num_puzz=0;
 CONFIG config;
 DIMS dims;
 ULENTRY *ulist=NULL, *ulist_current=NULL;
+uint8_t* row_counts;
+uint8_t* col_counts;
 
 //uint8_t keystates[NUMKEYSTATES];
 
@@ -233,7 +235,13 @@ prog_exit:
     free(puzzinfo);
     free(grid);
     free(guess);
-
+    free(row_counts);
+    free(col_counts);
+    if (ulist)
+    {
+        deleteList(ulist);
+        free(ulist);
+    }
     vdp_cursor_enable(true);
     vdp_write_at_text_cursor();
     TAB(1,38);
@@ -930,12 +938,18 @@ int loadFileInfo(char* puzzles_fname)
         TAB(1,0);printf("can't open %s", puzzles_fname);
     } else {
         //CLS;
-        if (!fgets(buff,80,fptr)) return -1;
+        if (!fgets(buff,80,fptr)) {
+            fclose(fptr);
+            return -1;
+        }
         cnt = atoi(buff);
 
         if (!puzzinfo) {
             puzzinfo = (PUZZINFO*) calloc(cnt, sizeof(PUZZINFO));
-            if (!puzzinfo) return -1;
+            if (!puzzinfo) {
+                fclose(fptr);
+                return -1;
+            }
         }
 
         for (int i=0; i<cnt; i++) {
@@ -958,6 +972,7 @@ int loadFileInfo(char* puzzles_fname)
 
             //printf("%d: <%d> <%d> <%s> <%s> <%s>\n",i,puzzinfo[i].id,puzzinfo[i].gs,puzzinfo[i].fname,puzzinfo[i].title,puzzinfo[i].clue);
         }
+        fclose(fptr);
     }
     return cnt;
 }
@@ -975,6 +990,7 @@ int loadUserInfo(char* userinfo_fname)
             token = strtok(NULL, ",");
             puzzinfo[id-1].state = atoi(token);
         }
+        fclose(fptr);
     }
     return 0;
 }
@@ -1005,6 +1021,8 @@ bool createGrids(int GS)
 
     free(grid);
     free(guess);
+    free(row_counts);
+    free(col_counts);
 
     // Create the grid (to hold solution)
     grid = (uint8_t*) calloc(dims.gs * dims.gs, sizeof(uint8_t));
@@ -1014,6 +1032,15 @@ bool createGrids(int GS)
     // Create a grid to hold current in progress guesses
     guess = (uint8_t*) calloc(dims.gs * dims.gs, sizeof(uint8_t));
     if (!guess) {
+        return false;
+    }
+    // Create the array of column and row counts
+    row_counts = (uint8_t*) calloc(dims.gs, sizeof(uint8_t));
+    if (!row_counts) {
+        return false;
+    }
+    col_counts = (uint8_t*) calloc(dims.gs, sizeof(uint8_t));
+    if (!col_counts) {
         return false;
     }
     return true;
